@@ -22,8 +22,9 @@ require_once(DOKU_INC.'inc/init.php');
 $fileID = $INPUT->int('fileid');
 $media = $INPUT->str('media');
 
+
 // db access
-$helper = new helper_plugin_cloud();
+$helper = new helper_plugin_owncloud();
 $realmedia = $helper->getFilenameForID($fileID,true);
 
 /*
@@ -42,7 +43,7 @@ $queryString = $_SERVER['QUERY_STRING'];
 if(!empty($realmedia)) $queryString = str_replace($media,$realmedia,$queryString);
    
 
-
+file_put_contents("iddds2.txt", $fileID);
 // follow the rewrite-mode (from function ml(...), see /inc/common.php)
 // Webserver- or dokuwiki-/no rewrite? 
 if($conf['userewrite'] == 1) {
@@ -71,6 +72,7 @@ echo '$queryString:'.$queryString."<br>";
 echo '$realmedia:'.$realmedia."<br>";
 echo "<hr>";
 */
+file_put_contents("iddds.txt", $fileID."|".DOKU_URL.$xlink);
 
 session_write_close(); //close session, we want use header()
 

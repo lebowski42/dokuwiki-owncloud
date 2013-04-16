@@ -44,7 +44,7 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 	}
 	
 	function connectTo($mode) {
-		$this->Lexer->addSpecialPattern("\{\{[^\}]+\}\}",$mode,'plugin_owncloud');
+		//$this->Lexer->addSpecialPattern("\{\{[^\}]+\}\}",$mode,'plugin_owncloud');
 		//$this->Lexer->addSpecialPattern("\[\{\{[^\}]+\}\}\]",$mode,'owncloud');
 		
 	}
@@ -56,8 +56,10 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 
 	function render($mode, &$renderer, $data){
 		list($match, $state, $pos) = $data;
-		$a=var_export($match);
-		$renderer->doc.= $a;
+		//$a=var_export($match);
+		//$a=html_revisions(0,":wiki:ds1.png");
+		$a="Hallo Welt";
+		$renderer->doc.= var_export($match);
 		return TRUE;
 	}
 }

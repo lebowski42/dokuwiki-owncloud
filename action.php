@@ -3,8 +3,8 @@
  * @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
  * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>
  */
-error_reporting (E_ALL | E_STRICT);  
-ini_set ('display_errors', 'On');
+//error_reporting (E_ALL | E_STRICT);  
+//ini_set ('display_errors', 'On');
 
 
 // must be run within Dokuwiki
@@ -41,6 +41,11 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 		if(!$helper) return $rawdata;
 		$parts = explode("|",$rawdata);
 		$link = array_shift($parts);
+		// Save alignment
+		$ralign = (bool)preg_match('/^ /',$link);
+		$lalign = (bool)preg_match('/ $/',$link);
+		// delete whitespaces
+		$link = trim($link);
 		//split into src and parameters (using the very last questionmark) from /inc/parser/handler.php
 		$pos = strrpos($link,'?');
 		if($pos != false){
@@ -50,8 +55,14 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 			$src   = $link;
 			$param = '';
 		}
+		if(preg_match('#fileid=(\d+)?#i',$param,$match)){
+			($match[1]) ? $fileid = intval($match[1]) : $fileid = 0;
+		}else{
+			$fileid = 0;
+		}
+		$desc = implode("|",$parts);
 		// get fileID
-		if(count($parts) > 1  ){ // We've a fileid
+		/*if(count($parts) > 1  ){ // We've a fileid
 			$last = array_pop($parts);
 			$fileid = intval($last); // Last element maybe fileid
 			$desc = implode("|",$parts); // The rest is the description, can contain |
@@ -59,7 +70,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 		}else{
 			$fileid = 0;
 			$desc = array_shift($parts);
-		}
+		}*/
 		// db access
 		
 		if($fileid > 0){ // Then find source from id
@@ -78,9 +89,11 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 			$path = str_replace(':','/',$src);
 			$path = trim($path,'/'); //Remove slashes at the beginning
 			$fileid = $helper->getIDForFilename($path);
+			if($fileid == '' || $fileid < 1) return $rawdata;
 		}
-		
-		return $src.(($param != "") ? "?$param":"")."|".$desc."|".$fileid;
+		$param = preg_replace('#fileid=(\d+)?#i',"fileid=$fileid",$param,-1,$count);
+		if($fileid!='' && $fileid > 0 && $count < 1) $param = (($param != "") ? "$param&fileid=$fileid":"fileid=$fileid");
+		return (($ralign)?" ":"").$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc;
+		//return (($ralign)?" ":"").$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc."|".$fileid;
 	}
-
 }
