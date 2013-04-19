@@ -10,6 +10,9 @@
  * @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
  * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>
  */
+ 
+error_reporting (E_ALL | E_STRICT);  
+ini_set ('display_errors', 'On');
 
 if(!defined('DOKU_INC')) define('DOKU_INC',realpath(dirname(__FILE__).'/../../').'/');
 if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
@@ -40,28 +43,41 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		return 319;  // before Dokuwiki-media-parser (320)
 	}
 	function getPType(){
-		return 'normal';
+		return 'block';
 	}
 	
 	function connectTo($mode) {
-		//$this->Lexer->addSpecialPattern("\{\{[^\}]+\}\}",$mode,'plugin_owncloud');
+		$this->Lexer->addSpecialPattern("\{\{[^\}]+\}\}",$mode,'plugin_owncloud');
 		//$this->Lexer->addSpecialPattern("\[\{\{[^\}]+\}\}\]",$mode,'owncloud');
 		
 	}
 
 	function handle($match, $state, $pos, &$handler){
+		$rawdata = $match;
 		$match= Doku_Handler_Parse_Media($match);
-		 return array($match, $state, $pos);
+		$match['fileid']=0;
+		if(preg_match('#fileid=(\d+)?#i',$rawdata,$fileid)){
+			($fileid[1]) ? $match['fileid'] = $fileid[1]:"";
+		}
+		$match['pos'] = $pos;
+		return array($match, $state, $pos);
 	}
 
 	function render($mode, &$renderer, $data){
+		$renderer->doc .= "<div class=\"wrapper_filelist\"><div class=\"das\">Hallo</div>\n<a href=\"#\" onclick=\"javaScript:filelist.start(this)\">This is me</a></div>";
+		return true;
+		
 		list($match, $state, $pos) = $data;
-		//$a=var_export($match);
-		//$a=html_revisions(0,":wiki:ds1.png");
-		$a="Hallo Welt";
-		$renderer->doc.= var_export($match);
-		return TRUE;
+		$helper = $this->loadHelper('owncloud',false);
+		if(!$helper) return false;
+		
+		if($helper->isExternal($match['src'])){
+			$renderer->doc.= $helper->externalmedia($match['src'], $match['title'], $match['align'], $match['width'],$match['height'], $match['cache'], $match['linking']);
+		}else{
+			$renderer->doc.=  $helper->internalmedia($match['fileid'],$match['src'], $match['title'], $match['align'], $match['width'],$match['height'], $match['cache'], $match['linking']);
+		}
+		//$b = $helper->getFolderContent(233);
+		//$renderer->doc .= var_export($b);
+		return true;
 	}
 }
-
-//Setup VIM: ex: et ts=4 enc=utf-8 :

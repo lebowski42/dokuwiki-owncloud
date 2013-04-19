@@ -37,6 +37,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 
 	
 	function buildLink($rawdata){
+		global $ID;
 		$helper = $this->loadHelper('owncloud',false);
 		if(!$helper) return $rawdata;
 		$parts = explode("|",$rawdata);
@@ -46,6 +47,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 		$lalign = (bool)preg_match('/ $/',$link);
 		// delete whitespaces
 		$link = trim($link);
+		if($helper->isExternal($link)) return $rawdata;
 		//split into src and parameters (using the very last questionmark) from /inc/parser/handler.php
 		$pos = strrpos($link,'?');
 		if($pos != false){
@@ -80,20 +82,27 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 				$notfound = false;
 			}else{
 				$notfound = true;
+				
 			}
 		}else{
 			$notfound = true;
 		}
 		// We have no file from id, look for id using source
 		if($notfound){ // Try to find ID from source
-			$path = str_replace(':','/',$src);
-			$path = trim($path,'/'); //Remove slashes at the beginning
-			$fileid = $helper->getIDForFilename($path);
+			$oldsrc = $src;
+			resolve_mediaid(getNS($ID),$src, $exists);
+			if($exists){// TODO Function for this.
+				$fileid = $helper->fileIDForWikiID($src);
+			}else{// Maybe directory
+				$fileid = $helper->fileIDForWikiID($path);
+				if($fileid != '' && $fileid > 0) $src = $oldsrc;
+			}
+			
 			if($fileid == '' || $fileid < 1) return $rawdata;
 		}
 		$param = preg_replace('#fileid=(\d+)?#i',"fileid=$fileid",$param,-1,$count);
 		if($fileid!='' && $fileid > 0 && $count < 1) $param = (($param != "") ? "$param&fileid=$fileid":"fileid=$fileid");
-		return (($ralign)?" ":"").$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc;
+		return (($ralign)?" ":"").":".$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc;
 		//return (($ralign)?" ":"").$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc."|".$fileid;
 	}
 }

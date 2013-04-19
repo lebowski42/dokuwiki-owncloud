@@ -45,16 +45,14 @@ if(!empty($realmedia)) {
 }else{
 	$realmedia = $media;
 }
-
-
    
 
 // follow the rewrite-mode (from function ml(...), see /inc/common.php)
 // Webserver- or dokuwiki-/no rewrite? 
 if($conf['userewrite'] == 1) {
-	$script = '_media';
+	$script = '_detail';
 } else {
-	$script = 'lib/exe/fetch.php';
+	$script = 'lib/exe/detail.php';
 }
 // build URL based on rewrite mode
 if($conf['userewrite']) {
@@ -67,6 +65,7 @@ if($conf['userewrite']) {
 		$xlink .= $script.'?media='.$realmedia;
 	}
 }
+
  
 /*
 echo "<hr>";
