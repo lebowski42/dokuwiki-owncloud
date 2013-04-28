@@ -9,11 +9,18 @@ a.media.mediafile.download{
 
 a.media.mediafile.detail{
 	background-image: url(images/lupe.png);
-margin: 0;
+	margin: 0;
 }
 
 .load {
-	
+	background: url(images/load.gif) no-repeat center;
+	height: 20px;
+	padding: 6px;
+}
+
+.filelistheader{
+	margin-bottom: 5px;
+	font-weight: bold;
 }
 
 .fileinfo {
@@ -21,6 +28,15 @@ margin: 0;
 	vertical-align:middle;
 }
 
-.das {
 
+.ip {
+	font-size: 75%;
+	color:grey;
+}
+
+a.mmlink,
+td.mmLink {
+	
+padding: 0;
+margin: 0;
 }

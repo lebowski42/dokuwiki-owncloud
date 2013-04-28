@@ -14,6 +14,8 @@
 error_reporting (E_ALL | E_STRICT);  
 ini_set ('display_errors', 'On');
 
+if (!defined('DOKU_LF')) define('DOKU_LF', "\n");
+if (!defined('DOKU_TAB')) define('DOKU_TAB', "\t");
 if(!defined('DOKU_INC')) define('DOKU_INC',realpath(dirname(__FILE__).'/../../').'/');
 if(!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN',DOKU_INC.'lib/plugins/');
 
@@ -43,7 +45,7 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		return 319;  // before Dokuwiki-media-parser (320)
 	}
 	function getPType(){
-		return 'block';
+		return 'normal';
 	}
 	
 	function connectTo($mode) {
@@ -64,13 +66,10 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 	}
 
 	function render($mode, &$renderer, $data){
-		$renderer->doc .= "<div class=\"wrapper_filelist\"><div class=\"das\">Hallo</div>\n<a href=\"#\" onclick=\"javaScript:filelist.start(this)\">This is me</a></div>";
-		return true;
-		
+		//$renderer->doc .= "<div class=\"wrapper_filelist\"><div class=\"das\">Hallo</div>\n<a href=\"#\" onclick=\"javaScript:filelist.start(this)\">This is me</a></div>";
 		list($match, $state, $pos) = $data;
 		$helper = $this->loadHelper('owncloud',false);
 		if(!$helper) return false;
-		
 		if($helper->isExternal($match['src'])){
 			$renderer->doc.= $helper->externalmedia($match['src'], $match['title'], $match['align'], $match['width'],$match['height'], $match['cache'], $match['linking']);
 		}else{

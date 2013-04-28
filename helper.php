@@ -30,19 +30,21 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
     /**
      * Constructor to connect to db and check if ownCloud is installed 
      */
-    public function helper_plugin_owncloud() {
-		global $conf;
-		require_once($this->getConf('pathtoowncloud').'/lib/base.php');
-		// Check if ownCloud is installed or in maintenance (update) mode
-		if (!OC_Config::getValue('installed', false)) {
+    public function helper_plugin_owncloud($db=true) {
+		if($db){
 			global $conf;
-			require_once('lang/'.$conf['lang'].'/settings.php');
-			echo $lang['owncloudNotInstalled'];
-			exit();
+			require_once($this->getConf('pathtoowncloud').'/lib/base.php');
+			// Check if ownCloud is installed or in maintenance (update) mode
+			if (!OC_Config::getValue('installed', false)) {
+				global $conf;
+				require_once('lang/'.$conf['lang'].'/settings.php');
+				echo $lang['owncloudNotInstalled'];
+				exit();
+			}
+			// Find Storage ID
+			$this->dbQuery('SELECT numeric_id FROM `*PREFIX*storages` WHERE `id` LIKE ?', array('%'.$conf['mediadir'].'/'));
+			$this->storageNr = $this->lastQuery->fetchOne();
 		}
-		// Find Storage ID
-		$this->dbQuery('SELECT numeric_id FROM `*PREFIX*storages` WHERE `id` LIKE ?', array('%'.$conf['mediadir'].'/'));
-		$this->storageNr = $this->lastQuery->fetchOne();
     }
     
     /**
@@ -81,9 +83,22 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		return $path;
 	}
 	
+	/** replace / with / */
 	public function pathToWikiID($path){
 		return str_replace('/',':',$path);
 	}
+	
+	/** replace : with / */
+	public function wikiIDToPath($id){
+		return str_replace(':','/',$id);
+	}
+	
+	/** Returns true if the given path is a directory */
+	public function isMediaDir($path){
+		global $conf;
+		return is_dir($conf['mediametadir'].'/'.trim($path,'/'));
+	}
+
 	
 	/**
     * Returns the fileid for the correspondig path (from table OC_filecache)
@@ -122,6 +137,103 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		}
 		return array($folders,$files);
 	}
+	
+	/** Returns the authors of the given mediafile as String. If plugin authorlist is enabled,
+	 *  authors will be linked as configured in this plugin. 
+	 */
+	public function getAuthorsOfMediafile($file){
+		global $ID;
+		if($this->getConf('linkAuthor') && !plugin_isdisabled('authorlist')){
+			$authorlist = $this->loadHelper('authorlist',true);
+			$authorlist->setOptions($ID,array('displayaslist'=>false));
+		}
+		$meta = $this->getMediaMeta($file);
+		if(!empty($meta)){
+			$authors = array(); 
+			foreach($meta as $onemeta){
+				$line = explode("\t", $onemeta);
+				if($line[4] != "" && !in_array($line[4],$authors)) array_push($authors,$line[4]);
+			}
+			if($authorlist){
+				foreach($authors as &$author){
+					$author=$authorlist->renderOneAuthor($author,$authorlist->getFullname($author));
+				}
+			}
+			return implode(", ", $authors);
+		}
+		return '';
+	}
+	
+	/** Returns the meta data of the given mediafile */
+	public function getMediaMeta($file){
+		global $conf;
+		if(file_exists($conf['mediametadir'].'/'.$file.'.changes')) return file($conf['mediametadir'].'/'.$file.'.changes');
+		return array();
+	}
+	
+	public function mediaMetaStart($file){
+		global $lang;
+		$ret = '<div class="historyOC">'.DOKU_LF;
+		$ret .= DOKU_TAB.'<div class="table"><table  width="100%" class="inline">'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.'<tr class="row0">'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.DOKU_TAB.'<th class="col0" width="20%" >'.($this->getLang(historyVersion)).'</th><th  width="20%" class="col1">'.($this->getLang(historyAuthor)).'</th><th width="10%" class="col2">'.($this->getLang(filelistSize)).'</th><th class="col3" width="45%">'.($this->getLang(historyComment)).'</th>'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.'</tr>'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.'<tr><td colspan="4" class="load"></td></tr>'.DOKU_LF;
+		$ret .= DOKU_TAB.'</table></div></div>'.DOKU_LF;
+		// To run javascript only if filelist is on this side
+		$ret .= DOKU_TAB.'<script type="text/javascript">filehistory.start("'.$file.'");</script>'.DOKU_LF;
+		$wikiid = $this->pathToWikiID($file);
+		$ns = getNS($wikiid);
+		$mediamanager = '<a class="mmLink" href="'.DOKU_URL.'doku.php?ns='.$ns.'&image='.$this->pathToWikiID($file).'&do=media&tab_details=history">'.$this->getLang('compare').'</a>';
+		$ret .= $this->getLang('mediamanager_info').' '.$mediamanager;
+		return $ret;
+		
+		
+	}
+	
+	
+	public function mediaMetaAsList($file){
+		$ret = "";
+		global $conf;
+		$meta = $this->getMediaMeta($file);
+		if(empty($meta)) return '';
+		$meta =  array_reverse($meta); // Newest first.
+		if($this->getConf('linkAuthor') && !plugin_isdisabled('authorlist')){
+			$authorlist = $this->loadHelper('authorlist',true);
+			$authorlist->setOptions($ID,array('displayaslist'=>false));
+		}
+		$oldmedia = $conf['mediaolddir'];
+		$nr = 1;
+		foreach($meta as $onemeta){
+			$line = explode("\t", $onemeta);
+			$time = strftime($conf['dformat'],intval($line[0]));
+			if($nr > 1){ // in attic
+				list($name, $ext) =  $this->filenameAndExtension($file);
+				$path = $oldmedia.'/'.$name.'.'.$line[0].'.'.$ext;
+			}else{
+				$path = $conf['mediadir'].'/'.$file;
+			}
+			$size = (file_exists($path)) ? filesize_h(filesize($path)) : '--';
+			$author = ($authorlist)?$authorlist->renderOneAuthor($line[4],$authorlist->getFullname($line[4])) : $line[4];
+			$author .= '<span class="ip">('.$line[1].')</span>';
+			
+			$ret .= '<tr class=" row'.$nr.'">';
+			$ret .= '<td class="col0" > '.$time.' </td><td class="col1">'.$author.'</td><td class="col2">'.$size.'</td><td class="col3">'.$line[5].'</td>';
+			$ret .= '</tr>';
+			$nr++;
+		}
+		return $ret;
+		
+		
+	}
+	
+	public function filenameAndExtension($file){
+			$extPos  = strrpos($file, '.');
+			$ext = substr($file, $extPos + 1);
+			$name = substr($file, 0, $extPos);
+			return array($name, $ext);
+	}
+        
         
         
     public function isExternal($src){
@@ -129,7 +241,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 			return  true;
 		}
 	}
-   
+	   
    
     /** Renders an internal media link. This is nearly the same function as internalmedia(...)
      *  in inc/xhtml.php extended to getting the filename from fileid. 
@@ -137,6 +249,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
     public function internalmedia ($fileid, $src, $title=NULL, $align=NULL, $width=NULL,
                             $height=NULL, $cache=NULL, $linking=NULL) {
         global $ID;
+        $filelist = false;
         list($src,$hash) = explode('#',$src,2);
         if($fileid != '' && $fileid > 0){
 				$res = $this -> getFilenameForID($fileid, true);
@@ -174,12 +287,16 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
             $class = preg_replace('/[^_\-a-z0-9]+/i','_',$ext);
             // + mimetype folder
             if(empty($ext)){
-					if($this->getMimetypeForID($fileid) == 'httpd/unix-directory') $class = 'folder';
+					if($this->getMimetypeForID($fileid) == 'httpd/unix-directory') {
+							$class = 'folder';
+							if($linking =='direct') $filelist = true;
+					}
 			}
             $link['class'] .= ' mediafile mf_'.$class;
             // + fileid  & $this->
             $link['url'] = $this->ml($src,array('id'=>$ID,'cache'=>$cache,'fileid'=>$fileid),($linking=='direct'));
-            if ($exists) $link['title'] .= ' (' . filesize_h(filesize(mediaFN($src))).')';
+            // + no size if directory
+            if ($exists && $class != 'folder') $link['title'] .= ' (' . filesize_h(filesize(mediaFN($src))).')';
         }
 
         if($hash) $link['url'] .= '#'.$hash;
@@ -188,11 +305,20 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
         if (!$exists) {
             $link['class'] .= ' wikilink2';
         }
-
         //output formatted
         // + return instead of .=
-        if ($linking == 'nolink' || $noLink) return $link['name'];
-        else return $this->_formatLink($link);
+        if ($linking == 'nolink' || $noLink){
+			 return $link['name'];
+		}else{
+			if(!$filelist){
+				return $this->_formatLink($link);
+			}else{
+				$link['name'] = $this->wikiIDToPath($src);
+				return $this->filelist($fileid);
+			}
+		}
+        
+        
 	}
 	
 	function externalmedia ($src, $title=NULL, $align=NULL, $width=NULL,
@@ -225,6 +351,22 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
         if ($linking == 'nolink' || $noLink) return  $link['name'];
         else return  $this->_formatLink($link);
     }
+    
+    /** Renders a list with all files of the given folder. Using jQuery (see script.js).
+     */ 
+    public function filelist($folderid, $link){
+		if(!isset($link)) $link = '<div class="filelistheader">'.($this->getLang('filelistHeader')).' '.$this->internalmedia($folderid,NULL,NULL, NULL, NULL,NULL, NULL, 'details').'</div>';
+		$ret = '<div class="filelistOC fileid'.$folderid.'">'.$link.DOKU_LF;
+		$ret .= DOKU_TAB.'<div class="table"><table  width="100%" class="inline">'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.'<tr class="row0">'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.DOKU_TAB.'<th class="col0">'.($this->getLang(filelistName)).'</th><th class="col1">'.($this->getLang(filelistAuthor)).'</th><th class="col2">'.($this->getLang(filelistDate)).'</th><th class="col3">'.($this->getLang(filelistSize)).'</th><th class="col4"></th>'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.'</tr>'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.'<tr><td colspan="5" class="load"></td></tr>'.DOKU_LF;
+		$ret .= DOKU_TAB.'</table></div></div>'.DOKU_LF;
+		// To run javascript only if filelist is on this side
+		$ret .= DOKU_TAB.'<script type="text/javascript"> window.filelistOnThisSide = true;</script>'.DOKU_LF;
+		return $ret;
+	}
 	
 	
 	/**
@@ -248,6 +390,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
  * @return string
  */
 	function ml($id = '', $more = '', $direct = true, $sep = '&amp;', $abs = false) {
+
 		global $conf;
 		if(is_array($more)) {
 			// strip defaults for shorter URLs

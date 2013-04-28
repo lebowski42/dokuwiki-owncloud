@@ -91,10 +91,10 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 		if($notfound){ // Try to find ID from source
 			$oldsrc = $src;
 			resolve_mediaid(getNS($ID),$src, $exists);
-			if($exists){// TODO Function for this.
+			if($exists){
 				$fileid = $helper->fileIDForWikiID($src);
 			}else{// Maybe directory
-				$fileid = $helper->fileIDForWikiID($path);
+				$fileid = $helper->fileIDForWikiID($oldsrc);
 				if($fileid != '' && $fileid > 0) $src = $oldsrc;
 			}
 			
