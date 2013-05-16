@@ -15,10 +15,10 @@ require_once(DOKU_INC.'inc/init.php');
 $helper = new helper_plugin_owncloud(false);
 if(isset($_POST['file']) && $_POST['file'] != ''){
 echo $_POST['file'];
-	echo $helper->mediaMetaAsList($_POST['file']);
+	echo $helper->mediaMetaAsList($_POST['file'],false);
 }
 else{
-	echo "kljlK";
+	echo "Nothing found";
 }
 
 

@@ -60,7 +60,7 @@ var filehistory = {
 					type: 'POST',
 					url: DOKU_BASE + '/lib/plugins/owncloud/ajaxHistory.php',
 					data: {file: file},
-					success: function(data) {filehistory.putContent(data, $row);},
+					success: function(ret) {if(ret != file){filehistory.putContent(ret, $row);}else{}},
 					async:false
 				});
 			});

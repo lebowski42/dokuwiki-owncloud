@@ -18,24 +18,73 @@ require_once(DOKU_PLUGIN.'action.php');
 
 class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 
+	// constants
+	const FILEUPDATE = 1;
+	const FILEREMOVE = 2;
+	const WIKISTORAGE = 'wiki';
+	
+
 	
 	function register(&$contr) {
 		$contr->register_hook('IO_WIKIPAGE_WRITE','BEFORE',$this,'write');
 		$contr->register_hook('PARSER_WIKITEXT_PREPROCESS','BEFORE',$this,'preprocess');
+		$contr->register_hook('MEDIA_UPLOAD_FINISH','AFTER',$this,'filecache',self::FILEUPDATE);
+		$contr->register_hook('MEDIA_DELETE_FILE','AFTER',$this,'filecache',self::FILEREMOVE);
+		
 		
 	}
     
+    /** include ownclouds base.php and build the view */
+    private function initFilecache(){
+		
+	}
+    
+    function filecache(&$event, $param){
+		global $conf;
+		require_once($this->getConf('pathtoowncloud').'/lib/base.php');
+		$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data[1]);
+		//$file = '/'.self::WIKISTORAGE.'/'.$event->data[2].'/'.$event->data[1];
+		//$refl = new ReflectionMethod('OC\Files\Cache\Updater', 'writeUpdate');
+		OC\Files\Filesystem::init($_SERVER['REMOTE_USER'],'/'.$_SERVER['REMOTE_USER'].'/files');
+
+		switch($param){
+				case self::FILEUPDATE:	$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data[1]);
+										OC\Files\Cache\Updater::writeUpdate($file); break;
+				case self::FILEREMOVE:	$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data['path']);
+										OC\Files\Cache\Updater::deleteUpdate($file); break;
+		}
+		 
+	}
+    
+    /**
+     * Add fileid or update filepath
+     *
+     * If file exists in the owncloud database, the fileid will be add to the file parameters,
+     * if fileid exists as parameter, the path will be updated (if necessary)
+     * Changes will be write to disk
+     * 
+     */
 	function write(&$event, $param){
 		$text = $event->data[0][1];
 		$event->data[0][1] = preg_replace('#\{\{(.+)\}\}#Uise', "'{{'.action_plugin_owncloud::buildLink('\\1').'}}'",$text);
 	}
 	
+	/**
+     * The same as write, but only for preprocess, e. g. when choose preview.
+     * 
+     */
 	function preprocess(&$event, $param){
 		$text = $event->data;
 		$event->data = preg_replace('#\{\{(.+)\}\}#Uise', "'{{'.action_plugin_owncloud::buildLink('\\1').'}}'",$text);
 	}
 
 	
+	
+	/**
+     * Build the link with fileid or update the filepath if fileid is given.
+     * @param string $rawdata the wikitext
+     * 
+     */
 	function buildLink($rawdata){
 		global $ID;
 		$helper = $this->loadHelper('owncloud',false);

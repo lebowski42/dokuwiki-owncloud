@@ -16,8 +16,8 @@ if (!defined('DOKU_LF')) define('DOKU_LF', "\n");
 if (!defined('DOKU_TAB')) define('DOKU_TAB', "\t");
 if (!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN', DOKU_INC.'lib/plugins/');
 
-error_reporting (E_ALL | E_STRICT);  
-ini_set ('display_errors', 'On');
+//error_reporting (E_ALL | E_STRICT);  
+//ini_set ('display_errors', 'On');
 
 
 class helper_plugin_owncloud extends DokuWiki_Plugin 
@@ -33,7 +33,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
     public function helper_plugin_owncloud($db=true) {
 		if($db){
 			global $conf;
-			require_once($this->getConf('pathtoowncloud').'/lib/base.php');
+			include_once($this->getConf('pathtoowncloud').'/lib/base.php');
 			// Check if ownCloud is installed or in maintenance (update) mode
 			if (!OC_Config::getValue('installed', false)) {
 				global $conf;
@@ -96,7 +96,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 	/** Returns true if the given path is a directory */
 	public function isMediaDir($path){
 		global $conf;
-		return is_dir($conf['mediametadir'].'/'.trim($path,'/'));
+		return is_dir($conf['mediadir'].'/'.trim($path,'/'));
 	}
 
 	
@@ -176,7 +176,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		$ret = '<div class="historyOC">'.DOKU_LF;
 		$ret .= DOKU_TAB.'<div class="table"><table  width="100%" class="inline">'.DOKU_LF;
 		$ret .= DOKU_TAB.DOKU_TAB.'<tr class="row0">'.DOKU_LF;
-		$ret .= DOKU_TAB.DOKU_TAB.DOKU_TAB.'<th class="col0" width="20%" >'.($this->getLang(historyVersion)).'</th><th  width="20%" class="col1">'.($this->getLang(historyAuthor)).'</th><th width="10%" class="col2">'.($this->getLang(filelistSize)).'</th><th class="col3" width="45%">'.($this->getLang(historyComment)).'</th>'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.DOKU_TAB.'<th class="col0" width="20%" >'.($this->getLang('historyVersion')).'</th><th  width="20%" class="col1">'.($this->getLang('historyAuthor')).'</th><th width="10%" class="col2">'.($this->getLang('filelistSize')).'</th><th class="col3" width="45%">'.($this->getLang('historyComment')).'</th>'.DOKU_LF;
 		$ret .= DOKU_TAB.DOKU_TAB.'</tr>'.DOKU_LF;
 		$ret .= DOKU_TAB.DOKU_TAB.'<tr><td colspan="4" class="load"></td></tr>'.DOKU_LF;
 		$ret .= DOKU_TAB.'</table></div></div>'.DOKU_LF;
@@ -195,8 +195,9 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 	public function mediaMetaAsList($file){
 		$ret = "";
 		global $conf;
+		global $ID;
 		$meta = $this->getMediaMeta($file);
-		if(empty($meta)) return '';
+		if(empty($meta)) return '<tr><td colspan="4" align="center">'.($this->getLang('noVersion')).'</td></tr>';
 		$meta =  array_reverse($meta); // Newest first.
 		if($this->getConf('linkAuthor') && !plugin_isdisabled('authorlist')){
 			$authorlist = $this->loadHelper('authorlist',true);
@@ -359,7 +360,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		$ret = '<div class="filelistOC fileid'.$folderid.'">'.$link.DOKU_LF;
 		$ret .= DOKU_TAB.'<div class="table"><table  width="100%" class="inline">'.DOKU_LF;
 		$ret .= DOKU_TAB.DOKU_TAB.'<tr class="row0">'.DOKU_LF;
-		$ret .= DOKU_TAB.DOKU_TAB.DOKU_TAB.'<th class="col0">'.($this->getLang(filelistName)).'</th><th class="col1">'.($this->getLang(filelistAuthor)).'</th><th class="col2">'.($this->getLang(filelistDate)).'</th><th class="col3">'.($this->getLang(filelistSize)).'</th><th class="col4"></th>'.DOKU_LF;
+		$ret .= DOKU_TAB.DOKU_TAB.DOKU_TAB.'<th class="col0">'.($this->getLang('filelistName')).'</th><th class="col1">'.($this->getLang('filelistAuthor')).'</th><th class="col2">'.($this->getLang('filelistDate')).'</th><th class="col3">'.($this->getLang('filelistSize')).'</th><th class="col4"></th>'.DOKU_LF;
 		$ret .= DOKU_TAB.DOKU_TAB.'</tr>'.DOKU_LF;
 		$ret .= DOKU_TAB.DOKU_TAB.'<tr><td colspan="5" class="load"></td></tr>'.DOKU_LF;
 		$ret .= DOKU_TAB.'</table></div></div>'.DOKU_LF;

@@ -15,4 +15,6 @@ $lang['historyComment']           = 'Comment';
 $lang['historyAuthor']            = 'By';
 $lang['path']		          = 'Path';	
 $lang['compare']                  = 'Compare Versions of this file in mediamanager?';
+$lang['noVersion']                  = 'No versions.';
+$lang['download']			= 'Download this file.';
 $lang['mediamanager_info']	  = '<strong>Note:</strong> You can compare the different versions of this file in mediamanager and restore older versions.';

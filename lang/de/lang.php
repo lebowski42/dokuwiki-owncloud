@@ -16,5 +16,7 @@ $lang['historyAuthor']            = 'Von';
 $lang['path']		          = 'Pfad';
 $lang['note']		          = 'Hinweis';		
 $lang['compare']                  = 'Versionen dieser Datei im Mediamanager vergleichen?';
+$lang['noVersion']                  = 'Keine Informationen über Versionen dieser Datei vorhanden.';
+$lang['download']			= 'Diese Datei herunterladen';
 $lang['mediamanager_info']	  = '<strong>Hinweis:</strong>: Sie können die einzelnen Versionen dieser Datei im Mediamanager vergleichen und alte Versionen
 wieder herstellen.';
