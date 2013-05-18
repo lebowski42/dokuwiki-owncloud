@@ -3,8 +3,8 @@
  * Reads the path for a mediafile from the owncloud database identified by the fileID 
  * submitted by &fileid=... . Then redirects to fetch.php
  *
- * @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
- * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>
+ * @license    GPL 3 (http://www.gnu.org/licenses/gpl.html)
+ * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>, 2013
  */
 
 error_reporting (E_ALL | E_STRICT);  

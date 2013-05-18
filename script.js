@@ -1,3 +1,9 @@
+/**
+ * jQuery-stuff to handle filelist and versionlist on detailpage
+ * 
+ * @license    GPL 3 (http://www.gnu.org/licenses/gpl.html)
+ * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>, 2013
+ */
 var filelist = {
 		start: function(){
 			var fileid;

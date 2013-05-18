@@ -5,8 +5,8 @@
  * Here is a description for developer to using the ownCloud database
  * http://doc.owncloud.org/server/5.0/developer_manual/app/appframework/database.html
  * 
- * @license    GPL 2 (http://www.gnu.org/licenses/gpl.html)
- * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>
+ * @license    GPL 3 (http://www.gnu.org/licenses/gpl.html)
+ * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>, 2013
  */
 // must be run within Dokuwiki
 if (!defined('DOKU_INC')) die();
