@@ -82,7 +82,7 @@ if(file_exists($fullpath)){
 				}
 				$authorsString = implode(", ", $authors);
 			}*/
-			$authorsString =$helper->getAuthorsOfMediafile($dir.'/'.$file);
+			list($authorsString,$desc,$count) =$helper->getAuthorsAndDescOfMediafile($dir.'/'.$file);
 			
 			echo '<tr class="row'.$nr.' '.$level.'">';
 			echo '<td class="col0" '.$padding.'> '.$detail.' </td><td class="col1 fileinfo">'.$authorsString.'</td><td class="col2 fileinfo">'.$mtime.'</td><td class="col3 fileinfo">'.$filesize.'</td><td class="col4 centeralign">'.$download.'</td>';

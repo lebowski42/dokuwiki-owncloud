@@ -18,6 +18,12 @@ a.media.mediafile.detail{
 	padding: 6px;
 }
 
+.load3 {
+	background: url(images/load3.gif) no-repeat left;
+	height: 20px;
+	padding: 6px;
+}
+
 .filelistheader{
 	margin-bottom: 5px;
 	font-weight: bold;

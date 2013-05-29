@@ -16,9 +16,9 @@ require_once(DOKU_INC.'inc/init.php');
 
 // db access
 
-$helper = new helper_plugin_owncloud(false);
-if(isset($_POST['file']) && $_POST['file'] != ''){
-	echo $helper->mediaMetaAsTable($_POST['file'],true);
+$helper = new helper_plugin_owncloud(true);
+if(isset($_POST['fileid']) && !empty($_POST['fileid'])){
+	echo $helper->fileInfoToString($_POST['fileid'],true);
 }
 else{
 	echo $helper->getLang('nothingfound');

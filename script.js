@@ -17,7 +17,6 @@ var filelist = {
 		},
 		
 		folderContent: function(data, $place, level){
-				
 				var $response=jQuery(data);
 				$folder = $response.find('.mf_folder');
 				$folder.removeAttr('href');
@@ -73,12 +72,52 @@ var filehistory = {
 		},
 		
 		putContent: function(data, $place){
-				
 				//var $response=jQuery(data);
 				$place.replaceWith(data);
 		},
 		
 	
+};
+
+var Usedmedia = {
+		start: function(){
+			var $ol = jQuery('#usedmedia');
+			var $items =  $ol.children();
+			jQuery.each($items,function(){
+										$li = jQuery(this);
+										//$li.append('<div class="load3"></div>');
+										Usedmedia.addInfo($li);
+								}
+			);
+			var $link = jQuery('#usemediadetail');
+			$link.attr('onclick', 'Usedmedia.collapse();');
+		},
+		addInfo: function(li){
+				//li.append("<ul><li>"+li.attr('fileid')+"</li><li>Mein Text</li></ul>");
+				if(!li.hasClass('expand')){
+					jQuery.ajax({
+						type: 'POST',
+						url: DOKU_BASE + '/lib/plugins/owncloud/ajaxUsedMedia.php',
+						data: {fileid: li.attr('fileid')},
+						success: function(data) {
+										//li.find('.load3').remove();
+										li.append(data);
+										li.addClass('expand')
+									},
+						async:true
+					});
+				}
+		},
+		collapse: function(){
+			var $ol = jQuery('#usedmedia');
+			var $items =  $ol.children();
+			jQuery.each($items,function(){
+						jQuery(this).find('.filedesc').remove();
+						jQuery(this).removeClass('expand');
+			});
+			var $link = jQuery('#usemediadetail');
+			$link.attr('onclick', 'Usedmedia.start();');
+		}
 };
 
 

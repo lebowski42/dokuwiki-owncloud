@@ -50,17 +50,19 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 	
 	function connectTo($mode) {
 		$this->Lexer->addSpecialPattern("\{\{[^\}]+\}\}",$mode,'plugin_owncloud');
-		//$this->Lexer->addSpecialPattern("\[\{\{[^\}]+\}\}\]",$mode,'owncloud');
+		$this->Lexer->addSpecialPattern("\[\{\{[^\}]+\}\}\]",$mode,'plugin_owncloud');
 		
 	}
 
 	function handle($match, $state, $pos, &$handler){
+		$imagebox =false;
+		if(preg_match('#\[(.*)\]#',$match,$itis)){
+			$match = $itis[1];
+			$imagebox = true;
+		}//file_put_contents("LinkTesten1.txt","\n",FILE_APPEND);
 		$rawdata = $match;
 		$match= Doku_Handler_Parse_Media($match);
-		$match['fileid']=0;
-		if(preg_match('#fileid=(\d+)?#i',$rawdata,$fileid)){
-			($fileid[1]) ? $match['fileid'] = $fileid[1]:"";
-		}
+		$match['imagebox'] = $imagebox;
 		$match['pos'] = $pos;
 		return array($match, $state, $pos);
 	}
@@ -70,13 +72,102 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		list($match, $state, $pos) = $data;
 		$helper = $this->loadHelper('owncloud',false);
 		if(!$helper) return false;
-		if($helper->isExternal($match['src'])){
-			$renderer->doc.= $helper->externalmedia($match['src'], $match['title'], $match['align'], $match['width'],$match['height'], $match['cache'], $match['linking']);
+		if($match['type']=='internalmedia'){
+			$match['fileid']=0;
+			if(preg_match('#fileid=(\d+)?#i',$rawdata,$fileid)){
+				($fileid[1]) ? $match['fileid'] = $fileid[1]:"";
+			}else{
+				$match['fileid'] = $helper->fileIDForWikiID($match['src']);
+			}
+		}
+		
+		//var_dump($match);
+		//exit(0);
+		$opener = '';
+		$closer = '';
+		if($match['type']!='internalmedia'){
+			$match['title'] .= ' ('.$this->getLang('source').': '.$match['src'].')';
+		}
+		if($match['imagebox']){
+			$this->handleImageBox(&$match);
+			$match['linking'] = 'details'; // Detail when click on image, enlarge if click on magnify
+			list($opener,$closer) = $this->buildImagebox($match);
+			$match['align'] = 'box2'; // overwrite class to mediabox2, alignment from thumb.
+		}
+		$renderer->doc.=$opener;
+		if($match['type']!='internalmedia'){
+			if($helper->isAllowedExternalImage($match['src'])) $renderer->doc.= $helper->externalmedia($match['src'], $match['title'], $match['align'], $match['width'],$match['height'], $match['cache'], $match['linking']);
 		}else{
 			$renderer->doc.=  $helper->internalmedia($match['fileid'],$match['src'], $match['title'], $match['align'], $match['width'],$match['height'], $match['cache'], $match['linking']);
 		}
+		$renderer->doc.=$closer;
 		//$b = $helper->getFolderContent(233);
 		//$renderer->doc .= var_export($b);
 		return true;
+	}
+	
+	
+	/**
+    * Expands the return from Doku_Handler_Parse_Media with settings for an imagebox.
+    * This code based on the code from the imagebox-plugin (https://www.dokuwiki.org/plugin:imagebox)
+    * written by FFTiger <fftiger@wikisquare.com> and myst6re <myst6re@wikisquare.com>
+    * licensed under the GPL 2 (http://www.gnu.org/licenses/gpl.html) 
+    *
+    * @param $match return from Doku_Handler_Parse_Media()
+    *
+    */
+	function handleImageBox($match){// Detail immer, M
+		$match['w'] = $match['width'];
+		$dispMagnify = ($match['w'] || $match['height']);
+		$gimgs = false;
+		list($src,$hash) = explode('#',$match['src'],2);
+		if($match['type']=='internalmedia') {
+			$exists = false;
+			resolve_mediaid(getNS($ID), $src, $exists);
+			$match['magnifyLink'] = ml($src,array('cache'=>$match['cache'],'fileid'=>$match['fileid']),true);
+			if($hash) $match['magnifyLink'] .= '#'.$hash;
+			if($exists)	$gimgs = @getImageSize(mediaFN($src));
+		}else{
+			$match['magnifyLink'] = ml($src,array('cache'=>'cache'),true);
+			if($hash) $match['detail'] .= '#'.$hash;
+			$gimgs = @getImageSize($src);
+		}
+		$match['exist'] = $gimgs!==false;
+		if(!$match['w'] && $match['exist']){
+				if($match['height']){
+					$match['w'] = $match['height']*$gimgs[0]/$gimgs[1];
+				}else{
+					$match['w'] = $gimgs[0];
+				}
+		}
+		if(!$match['align']) $match['align'] = 'rien';	
+	}
+	
+	
+	/**
+    * Builds the div's arround an image to get an imagebox. This code based 
+    * on the code from the imagebox-plugin (https://www.dokuwiki.org/plugin:imagebox)
+    * written by FFTiger <fftiger@wikisquare.com> and myst6re <myst6re@wikisquare.com>
+    * licensed under the GPL 2 (http://www.gnu.org/licenses/gpl.html) 
+    *
+    * @param $url match (return from Doku_Handler_Parse_Media() + handleImageBox())
+    * @return @openAndClose Array with two elements: the opening div's and 
+    *                       the closing div's
+    */
+	public function buildImagebox($match){
+		$opener  = '<div class="thumb2 t'.$match['align'].'" style="width:'.($match['w']?($match['w']+10).'px':'auto').'"><div class="thumbinner">';
+		$closer  = '<div class="thumbcaption">';
+		$closer .= '<div class="magnify">';
+		$closer .= '<a class="internal" title="'.$this->getLang('enlarge').'" href="'.$match['magnifyLink'].'">';
+		$closer .= '<img width="15" height="11" alt="" src="'.DOKU_BASE.'lib/plugins/owncloud/images/magnify-clip.png"/>';
+		$closer .= '</a></div>';
+		
+		$style=$this->getConf('default_caption_style');
+		if($style=='Italic')	$closer .= '<em>'.htmlspecialchars($match['title']).'</em>';
+		elseif($style=='Bold')	$closer .= '<strong>'.htmlspecialchars($match['title']).'</strong>';
+		else 					$closer .= htmlspecialchars($match['title']);
+		
+		$closer .= '</div></div></div>';
+		return array($opener,$closer);
 	}
 }

@@ -4,8 +4,8 @@
  * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>, 2013
  */
 
-//error_reporting (E_ALL | E_STRICT);  
-//ini_set ('display_errors', 'On');
+error_reporting (E_ALL | E_STRICT);  
+ini_set ('display_errors', 'On');
 
 
 // must be run within Dokuwiki
@@ -22,26 +22,42 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 	// constants
 	const FILEUPDATE = 1;
 	const FILEREMOVE = 2;
+	const NSREMOVE = 3;
 	const WIKISTORAGE = 'wiki';
 	
 
 	
 	function register(&$contr) {
 		$contr->register_hook('IO_WIKIPAGE_WRITE','BEFORE',$this,'write');
-		$contr->register_hook('PARSER_WIKITEXT_PREPROCESS','BEFORE',$this,'preprocess');
+		//$contr->register_hook('PARSER_WIKITEXT_PREPROCESS','BEFORE',$this,'preprocess');
 		$contr->register_hook('MEDIA_UPLOAD_FINISH','AFTER',$this,'filecache',self::FILEUPDATE);
 		$contr->register_hook('MEDIA_DELETE_FILE','AFTER',$this,'filecache',self::FILEREMOVE);
-		
+		$contr->register_hook('IO_NAMESPACE_DELETED','AFTER',$this,'filecache',self::NSREMOVE);
+		//$contr->register_hook('TPL_ACT_RENDER','AFTER',$this,'mediaOnThisPage');
+		$contr->register_hook('RENDERER_CONTENT_POSTPROCESS','AFTER',$this,'mediaOnThisPage');
+
 		
 	}
     
-    /** include ownclouds base.php and build the view */
-    private function initFilecache(){
+    function mediaOnThisPage(&$event, $param){
+		global $ID;
+		global $ACT;
+		global $INFO;
+		$d = $event->data[1];
+		//$event->data[1] .="<h1>Dies ist noch zu sehend</h1>";
+		if($ACT != 'show') return false;
+		if(!page_exists($ID)) return false;
+		//if(isset($INFO)) return false;
+		$event->data[1] .='<h1 id="headingusedmedia">'.$this->getLang('filesOnThisSide').'</h1>';
+		$helper = $this->loadHelper('owncloud',false);
+		$event->data[1] .= $helper->getMediaOfThisPage($ID);
 		
 	}
+
     
     function filecache(&$event, $param){
 		global $conf;
+		global $INFO;
 		require_once($this->getConf('pathtoowncloud').'/lib/base.php');
 		$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data[1]);
 		//$file = '/'.self::WIKISTORAGE.'/'.$event->data[2].'/'.$event->data[1];
@@ -50,9 +66,19 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 
 		switch($param){
 				case self::FILEUPDATE:	$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data[1]);
-										OC\Files\Cache\Updater::writeUpdate($file); break;
+										OC\Files\Cache\Updater::writeUpdate($file);
+										OCA\DokuWiki\Storage::dokuwikiUploadFinish($file,$_SERVER['REMOTE_USER'],!$event->data[4]);
+										break;
 				case self::FILEREMOVE:	$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data['path']);
 										OC\Files\Cache\Updater::deleteUpdate($file); break;
+				case self::NSREMOVE:	if($event->data[1] == 'media'){
+											$dir = '/'.self::WIKISTORAGE.'/'.str_replace(':','/',$event->data[0]);
+											OC\Files\Cache\Updater::deleteUpdate($dir);
+										}
+										break;
+											
+				
+										
 		}
 		 
 	}
@@ -66,8 +92,12 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
      * 
      */
 	function write(&$event, $param){
+		
 		$text = $event->data[0][1];
-		$event->data[0][1] = preg_replace('#\{\{(.+)\}\}#Uise', "'{{'.action_plugin_owncloud::buildLink('\\1').'}}'",$text);
+		$helper = $this->loadHelper('owncloud',false);
+		global $ID;
+		$helper->dbQuery('DELETE FROM `*PREFIX*dokuwiki_media_use` WHERE `wikipage_hash` = ?', array(md5($ID)));
+		$event->data[0][1] = preg_replace('#\{\{(.+)\}\}#Uise', "'{{'.action_plugin_owncloud::buildLink('\\1',true).'}}'",$text);
 	}
 	
 	/**
@@ -76,7 +106,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
      */
 	function preprocess(&$event, $param){
 		$text = $event->data;
-		$event->data = preg_replace('#\{\{(.+)\}\}#Uise', "'{{'.action_plugin_owncloud::buildLink('\\1').'}}'",$text);
+		$event->data = preg_replace('#\{\{(.+)\}\}#Uise', "'{{'.action_plugin_owncloud::buildLink('\\1',false).'}}'",$text);
 	}
 
 	
@@ -86,7 +116,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
      * @param string $rawdata the wikitext
      * 
      */
-	function buildLink($rawdata){
+	function buildLink($rawdata, $write = false){
 		global $ID;
 		$helper = $this->loadHelper('owncloud',false);
 		if(!$helper) return $rawdata;
@@ -125,14 +155,13 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 		}*/
 		// db access
 		
-		if($fileid > 0){ // Then find source from id
+		if($fileid > 0){ // Then find filename from id
 			$path = $helper->getFilenameForID($fileid);
 			if($path != ""){
 				$src = str_replace('/',':',$path);
 				$notfound = false;
 			}else{
 				$notfound = true;
-				
 			}
 		}else{
 			$notfound = true;
@@ -150,9 +179,19 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 			
 			if($fileid == '' || $fileid < 1) return $rawdata;
 		}
+		
+		if($write) $this -> mediaUse($fileid,&$helper);
 		$param = preg_replace('#fileid=(\d+)?#i',"fileid=$fileid",$param,-1,$count);
 		if($fileid!='' && $fileid > 0 && $count < 1) $param = (($param != "") ? "$param&fileid=$fileid":"fileid=$fileid");
 		return (($ralign)?" ":"").":".$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc;
 		//return (($ralign)?" ":"").$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc."|".$fileid;
+	}
+	
+	
+	function mediaUse($fileid, $helper){
+		global $ID;
+		global $INFO;
+		$heading = (is_array($INFO['meta']['description']['tableofcontents']))?$INFO['meta']['description']['tableofcontents'][0]['title']:'';
+		$helper->dbQuery('INSERT IGNORE INTO `*PREFIX*dokuwiki_media_use` (`fileid`, `wikipage`,`wikipage_hash`,`firstheading`) VALUES (?,?,?,?)', array($fileid, $ID, md5($ID), $heading));
 	}
 }
