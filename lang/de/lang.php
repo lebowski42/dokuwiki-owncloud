@@ -28,3 +28,4 @@ $lang['source']                   = 'Quelle';
 $lang['filesOnThisSide']          = 'Verwendete Bilder und Dateien';
 $lang['nothingfound']             = 'Nichts gefunden';
 $lang['showfileinfo']             = 'Autoren und weitere Dateiinformationen anzeigen/ausblenden.';
+$lang['movedfrom']                = 'verschoben von';

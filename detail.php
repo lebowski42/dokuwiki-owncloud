@@ -7,9 +7,6 @@
  * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>, 2013
  */
 
-error_reporting (E_ALL | E_STRICT);  
-ini_set ('display_errors', 'On');
-
 // Prepare
 if(!defined('DOKU_INC')) define('DOKU_INC', dirname(__FILE__).'/../../../');
 define('DOKU_DISABLE_GZIP_OUTPUT', 1);

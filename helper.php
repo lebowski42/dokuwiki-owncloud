@@ -1,6 +1,6 @@
 <?php
 /**
- * This class is a backend to use the ownCloud database while running Dokuwiki
+ * This class is a backend to use the ownCloud database while running DokuWiki
  * You can have a look to <ownCloud-Path>/lib/db.php for functions provided.
  * Here is a description for developer to using the ownCloud database
  * http://doc.owncloud.org/server/5.0/developer_manual/app/appframework/database.html
@@ -15,9 +15,7 @@ if (!defined('DOKU_INC')) die();
 if (!defined('DOKU_LF')) define('DOKU_LF', "\n");
 if (!defined('DOKU_TAB')) define('DOKU_TAB', "\t");
 if (!defined('DOKU_PLUGIN')) define('DOKU_PLUGIN', DOKU_INC.'lib/plugins/');
-
-error_reporting (E_ALL | E_STRICT);  
-ini_set ('display_errors', 'On');
+if(!defined('')) define('DOKU_CHANGE_TYPE_MOVE','M');
 
 
 class helper_plugin_owncloud extends DokuWiki_Plugin 
@@ -27,6 +25,11 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 	protected $storageNr;
 	protected $lastfileid;
 	public $wiki = 'wiki';
+	
+	// id => filename
+	protected $fileIDCache = array();
+	// filename => id
+	protected $filenameCache = array();
     
     /**
      * Constructor to connect to db and check if ownCloud is installed 
@@ -78,8 +81,14 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
     * @param $wikiID bool If true, slashes (/) will be replaced by colons (:)
     */
 	public function getFilenameForID($id, $wikiID=false){
-		$this->dbQuery('SELECT `path` FROM `*PREFIX*filecache` WHERE fileid = ? AND storage = ?', array($id, $this->storageNr));
-		$path = $this->lastQuery->fetchOne();
+		if(isset($this->fileidCache[$id])){// save db query
+			 $path = $this->fileidCache[$id];
+		}else{
+			$this->dbQuery('SELECT `path` FROM `*PREFIX*filecache` WHERE fileid = ? AND storage = ?', array($id, $this->storageNr));
+			if($this->lastQuery->numRows() == 0) return NULL;
+			$path = $this->lastQuery->fetchOne();
+		}
+		$this->fileidCache[$id] = $path;
 		if($wikiID) return $this->pathToWikiID($path);
 		return $path;
 	}
@@ -108,14 +117,18 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
     * @return $id the fileID
     */
 	public function getIDForFilename($file){
+		$file = trim($file,'/'); //Remove slashes at the beginning
+		// save db query
+		if(isset($this->filenameCache[$file])) return $this->filenameCache[$file];
 		$this->dbQuery('SELECT `fileid` FROM `*PREFIX*filecache` WHERE path = ? AND storage = ?', array($file, $this->storageNr));
 		$id = $this->lastQuery->fetchOne();
+		$this->filenameCache[$file] = $id;
 		$this->lastfileid = $id;
 		return $id;
 	}
 	
 	/**
-    * Returns the fileid for the correspondig path (from table OC_filecache)
+    * Returns the mimetype for the correspondig id (from table OC_filecache)
     *
     * @param $file string The path
     */
@@ -125,7 +138,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 	}
 	
 	/**
-    * Returns the content of a folder specified by his id (from oc database)
+    * Returns the content of a folder specified by its id (from oc database)
     *
     * @param $id string the folderID
     * @return @folderAndFiles folderID and filesID in the given dir
@@ -146,39 +159,56 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		return array($folders,$files);
 	}
 	
+	/**
+    * Returns the media used on the page specified by $wikiid (from 
+    * table OC_dokuwiki_media_used). It will be rendered as a orderd list
+    *
+    * @param $file string wikiid
+    * @return $string orderd list of media used on the page
+    */
 	public function getMediaOfThisPage($wikiid){
 		$this->dbQuery('SELECT `fileid`,`path` FROM `*PREFIX*dokuwiki_media_use` JOIN `*PREFIX*filecache` USING(`fileid`) WHERE `wikipage_hash` = ? ORDER BY `fileid` ASC', array(md5($wikiid)));
 		$rows = $this->lastQuery->numRows();
+		if(empty($rows) || $rows == 0) return false;
 		$ret = '<p style="float:right;"><a href="#headingusedmedia" onclick="Usedmedia.start();" id="usemediadetail">'.$this->getLang('showfileinfo').'</a></p>';
 		$ret .= DOKU_LF.'<ol id="usedmedia">'.DOKU_LF;
 		$ids = $this->lastQuery;
 		for($i = 1; $i <= $rows; $i++){
 			$row = $ids->fetchRow();
 			$ret .= DOKU_TAB.'<li class="mediaitem" fileid="'.$row['fileid'].'">';
-			$ret .= $this->internalmedia($row['fileid'],"",$row['path'],NULL,16,NULL,NULL,'linkonly');
+			$ret .= $this->internalmedia($row['fileid'],"",(($row['path']!='')?$row['path']:'/'),NULL,16,NULL,NULL,'linkonly');
 			$ret .= '</li>'.DOKU_LF;
 		}
-		$ret .= "</ol>".DOKU_LF;
+		$ret .= '</ol>'.DOKU_LF;
 		return $ret;
 		
 	}
 	
+	/**
+    * Returns formatted informations about the given $file or $id. The
+    * informations contain the time, the number of versions, the authors
+    * and the description. 
+    *
+    * @param $file full filename or id
+    * @param $isid choose true, if the first parameter is a fileid
+    * @return $string html with file informations
+    */
 	public function fileInfoToString($file, $isID = false){
 		global $conf;
 		if($isID) $file = $this->getFilenameForID($file);
+		if($this->isMediaDir($file)) return '';
 		list($authorsString,$desc,$count,$time) = $this->getAuthorsAndDescOfMediafile($file);
+		if(empty($count)) $count = 0;
 		return '<span class="filedesc" style=" font-size:90%;">'.
 			   '<p style="margin-bottom:0px;padding-left:16px;"><span><b>'.$this->getLang('historyVersion').':</b>&nbsp;'.strftime($conf['dformat'],intval($time)).'&nbsp;('.$count.'&nbsp;'.($count == 1?$this->getLang('version'):$this->getLang('versions')).')</span></b>'.	
 			   '<p style="margin-bottom:0px;padding-left:16px;"><span><b>'.$this->getLang('filelistAuthor').'</b>:&nbsp;'.$authorsString.'</span></p>'.
-		       (($desc != '' && $desc != 'angelegt')?'<p style="margin-bottom:2px;padding-left:16px;"><b>'.$this->getLang('historyComment').'</b>:&nbsp;'.$desc.'</p>':'').'</span>';
-		
-		
+		       (($desc != '' && $desc != $lang['created'])?'<p style="margin-bottom:2px;padding-left:16px;"><b>'.$this->getLang('historyComment').'</b>:&nbsp;'.$desc.'</p>':'').'</span>';
 	}
 	
 	
 	
 	
-	/** Returns the authors of the given mediafile as String. If plugin authorlist is enabled,
+	/** Returns the authors of the given mediafile as string. If plugin authorlist is enabled,
 	 *  authors will be linked as configured in this plugin. 
 	 */
 	public function getAuthorsAndDescOfMediafile($file){
@@ -250,6 +280,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		$ret = "";
 		global $conf;
 		global $ID;
+		global $lang;
 		$meta = $this->getMediaMeta($file);
 		if(empty($meta)) return '<tr><td colspan="4" align="center">'.($this->getLang('noVersion')).'</td></tr>';
 		$meta =  array_reverse($meta); // Newest first.
@@ -259,21 +290,29 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		}
 		$oldmedia = $conf['mediaolddir'];
 		$nr = 1;
+		$fetch = DOKU_BASE.'lib/exe/fetch.php';
 		foreach($meta as $onemeta){
 			$line = explode("\t", $onemeta);
 			$time = strftime($conf['dformat'],intval($line[0]));
 			if($nr > 1){ // in attic
 				list($name, $ext) =  $this->filenameAndExtension($file);
 				$path = $oldmedia.'/'.$name.'.'.$line[0].'.'.$ext;
+				$link = '<a title="'.$time.'" href="'.$fetch.'?media='.($this->pathToWikiID($file)).'&rev='.$line[0].'" target="_blank">'.$time.'</a>';
 			}else{
 				$path = $conf['mediadir'].'/'.$file;
+				$link = $time.' <small>('.$lang['current'].')<small>';;
+				
 			}
 			$size = (file_exists($path)) ? filesize_h(filesize($path)) : '--';
-			$author = ($authorlist)?$authorlist->renderOneAuthor($line[4],$authorlist->getFullname($line[4])) : $line[4];
+			if(empty($line[4]))	$author = $line[1]; // IP if no author
+			else $author = ($authorlist)?$authorlist->renderOneAuthor($line[4],$authorlist->getFullname($line[4])) : $line[4];
 			//$author .= '<span class="ip">('.$line[1].')</span>';
+			if($line[2] == DOKU_CHANGE_TYPE_MOVE) $extra = ' ('.$this->getLang('movedfrom').' '.hsc($line[6]).')';
+			else $extra = '';
+			
 			
 			$ret .= '<tr class=" row'.$nr.'">';
-			$ret .= '<td class="col0" > '.$time.' </td><td class="col1">'.$author.'</td><td class="col2">'.$size.'</td><td class="col3">'.$line[5].'</td>';
+			$ret .= '<td class="col0" > '.$link.' </td><td class="col1">'.$author.'</td><td class="col2">'.$size.'</td><td class="col3">'.$line[5].$extra.'</td>';
 			$ret .= '</tr>';
 			$nr++;
 		}
@@ -345,7 +384,11 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
    
     /** 
      * Renders an internal media link. This is nearly the same function as internalmedia(...)
-     *  in inc/xhtml.php extended to getting the filename from fileid. 
+     *  in inc/parser/xhtml.php extended to getting the filename from fileid. 
+     * 
+     * @author Harry Fuecks <hfuecks@gmail.com>
+     * @author Andreas Gohr <andi@splitbrain.org>
+     * @author Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>
      */   
     public function internalmedia($fileid, $src, $title=NULL, $align=NULL, $width=NULL,$height=NULL, $cache=NULL, $linking=NULL) {
         global $ID;
@@ -354,8 +397,12 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
         if($fileid != '' && $fileid > 0){
 				$res = $this -> getFilenameForID($fileid, true);
 		}
-		if($res != ''){
+		if(isset($res)){
 				$src = $res;
+				if($src == ''){ // we are at the top
+					$src = '/';
+					if(empty($title)) $title = '/';
+				}
 				$exists = true;
 		}else{
 			$oldsrc = $src;
@@ -421,6 +468,13 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
         
 	}
 	
+	/** 
+     * Renders an external media link. This is the same function as externalmedia(...)
+     * in inc/parser/xhtml.php, here it returns the link and don't add it to the render doc
+     * 
+     * @author Harry Fuecks <hfuecks@gmail.com>
+     * @author Andreas Gohr <andi@splitbrain.org>
+     */   
 	function externalmedia ($src, $title=NULL, $align=NULL, $width=NULL,
                             $height=NULL, $cache=NULL, $linking=NULL) {
         list($src,$hash) = explode('#',$src,2);
@@ -470,25 +524,29 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 	
 	
 	/**
- * Build a link to a media file
- *
- * Will return a link to the detail page if $direct is false
- *
- * The $more parameter should always be given as array, the function then
- * will strip default parameters to produce even cleaner URLs
- * 
- * This is nearly the code from inc/common.php. Replaced lib/exe/fetch.php 
- * with lib/plugins/owncloud/fetch.php.
- * 
- * @author     Andreas Gohr <andi@splitbrain.org>
- *
- * @param string  $id     the media file id or URL
- * @param mixed   $more   string or array with additional parameters
- * @param bool    $direct link to detail page if false
- * @param string  $sep    URL parameter separator
- * @param bool    $abs    Create an absolute URL
- * @return string
- */
+	 * This is nearly the same function as ml(...) in inc/common.php 
+	 * extended to getting the filename from fileid. 
+	 * 
+	 * Build a link to a media file
+	 *
+	 * Will return a link to the detail page if $direct is false
+	 *
+	 * The $more parameter should always be given as array, the function then
+	 * will strip default parameters to produce even cleaner URLs
+	 * 
+	 * This is nearly the code from inc/common.php. Replaced lib/exe/fetch.php 
+	 * with lib/plugins/owncloud/fetch.php.
+	 * 
+	 * @author Andreas Gohr <andi@splitbrain.org>
+	 * @author Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>
+	 *
+	 * @param string  $id     the media file id or URL
+	 * @param mixed   $more   string or array with additional parameters
+	 * @param bool    $direct link to detail page if false
+	 * @param string  $sep    URL parameter separator
+	 * @param bool    $abs    Create an absolute URL
+	 * @return string
+	 */
 	function ml($id = '', $more = '', $direct = true, $sep = '&amp;', $abs = false) {
 
 		global $conf;
@@ -739,17 +797,18 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 	/* Looking for a fileid when a wikiid is given
 	 *
 	 * @param String wikiid of the mediafile 
+	 * @return fileid for a wikiid
 	 */
 	public function fileIDForWikiID($src){
 			$path = str_replace(':','/',$src);
-			$path = trim($path,'/'); //Remove slashes at the beginning
 			return $this->getIDForFilename($path);
 	}
 	
 	
 	/* Returns a list with all pages using the given media
 	 *
-	 * @param String wikiid of the mediafile 
+	 * @param String fileid of the mediafile 
+	 * @return String List with all pages using the specified media.
 	 */
 	public function mediaInUse($fileID){
 		$this->dbQuery('SELECT `firstheading`,`wikipage` FROM `*PREFIX*dokuwiki_media_use` WHERE fileid = ?', array($fileID));

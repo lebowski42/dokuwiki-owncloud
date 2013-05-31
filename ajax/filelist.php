@@ -3,13 +3,11 @@
  * @license    GPL 3 (http://www.gnu.org/licenses/gpl.html)
  * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>, 2013
  */
-error_reporting (E_ALL | E_STRICT);  
-ini_set ('display_errors', 'On');
 
 // Prepare
 global $conf;
 
-if(!defined('DOKU_INC')) define('DOKU_INC', dirname(__FILE__).'/../../../');
+if(!defined('DOKU_INC')) define('DOKU_INC', dirname(__FILE__).'/../../../../');
 define('DOKU_DISABLE_GZIP_OUTPUT', 1);
 // $conf and classpathes
 require_once(DOKU_INC.'inc/init.php');
@@ -44,7 +42,7 @@ if(file_exists($fullpath)){
 	natcasesort($fullpath); // sort by name
 	$files = array();
 	$folders = array();
-	foreach( $dircontent as $file ){
+	foreach($dircontent as $file ){
 		if($file == '.' || $file == '..') continue;
 		if(is_dir($fullpath.'/'.$file)){
 			array_push($folders, $file);
@@ -55,7 +53,7 @@ if(file_exists($fullpath)){
 
 	if(empty($folders) && empty($files)) echo '<tr class="collapsed row '.$level.'"><td  colspan="5" '.$padding.' ><div style="color:grey">'.($helper->getLang('emptyFolder')).'</div></td></tr>';
 	$nr = 1;
-	foreach( $folders as $folder ){
+	foreach($folders as $folder){
 			$link = $helper->internalmedia(0,$helper->pathToWikiID($dir.'/'.$folder));
 			$mtime = strftime($conf['dformat'],filemtime($fullpath.'/'.$folder));
 			$title = $helper->_media($helper->getLastfileid(), $helper->pathToWikiID($dir.'/'.$folder), NULL, NULL, NULL, NULL, NULL, false);
@@ -66,9 +64,10 @@ if(file_exists($fullpath)){
 			echo '</tr>';
 			$nr++;
 	}
-	foreach( $files as $file ){
+	foreach($files as $file){
 			$filesize = filesize_h(filesize($fullpath.'/'.$file));
 			$mtime = strftime($conf['dformat'],filemtime($fullpath.'/'.$file));
+			
 			$detail = $helper->internalmedia(0,$helper->pathToWikiID($dir.'/'.$file),NULL,NULL,16,NULL,NULL,'linkonly');
 			$title = $helper->_media($helper->getLastfileid(), $helper->pathToWikiID($dir.'/'.$file), NULL, NULL, NULL, NULL, NULL, false);
 			$url = $helper->ml($helper->pathToWikiID($dir.'/'.$file), array('fileid'=>($helper->getLastfileid())),true);
@@ -84,7 +83,7 @@ if(file_exists($fullpath)){
 			}*/
 			list($authorsString,$desc,$count) =$helper->getAuthorsAndDescOfMediafile($dir.'/'.$file);
 			
-			echo '<tr class="row'.$nr.' '.$level.'">';
+			echo '<tr title="'.$desc.'" class="row'.$nr.' '.$level.'">';
 			echo '<td class="col0" '.$padding.'> '.$detail.' </td><td class="col1 fileinfo">'.$authorsString.'</td><td class="col2 fileinfo">'.$mtime.'</td><td class="col3 fileinfo">'.$filesize.'</td><td class="col4 centeralign">'.$download.'</td>';
 			echo '</tr>';
 			$nr++;

@@ -26,51 +26,81 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 	const WIKISTORAGE = 'wiki';
 	
 
-	
+	/**
+	 * Register all hooks
+	*/
 	function register(&$contr) {
 		$contr->register_hook('IO_WIKIPAGE_WRITE','BEFORE',$this,'write');
 		//$contr->register_hook('PARSER_WIKITEXT_PREPROCESS','BEFORE',$this,'preprocess');
 		$contr->register_hook('MEDIA_UPLOAD_FINISH','AFTER',$this,'filecache',self::FILEUPDATE);
 		$contr->register_hook('MEDIA_DELETE_FILE','AFTER',$this,'filecache',self::FILEREMOVE);
 		$contr->register_hook('IO_NAMESPACE_DELETED','AFTER',$this,'filecache',self::NSREMOVE);
-		//$contr->register_hook('TPL_ACT_RENDER','AFTER',$this,'mediaOnThisPage');
 		$contr->register_hook('RENDERER_CONTENT_POSTPROCESS','AFTER',$this,'mediaOnThisPage');
+		$contr->register_hook('TPL_ACT_RENDER','AFTER',$this,'mediaOnThisPageREV');
+		
 
 		
 	}
     
+    /**
+    * Returns the path for the correspondig fileID (from table OC_filecache)
+    * Adds a list with all media used on this page to the end of the page
+    * Skips older revisions.
+    */
     function mediaOnThisPage(&$event, $param){
 		global $ID;
 		global $ACT;
-		global $INFO;
+		global $REV;
 		$d = $event->data[1];
 		//$event->data[1] .="<h1>Dies ist noch zu sehend</h1>";
 		if($ACT != 'show') return false;
-		if(!page_exists($ID)) return false;
-		//if(isset($INFO)) return false;
-		$event->data[1] .='<h1 id="headingusedmedia">'.$this->getLang('filesOnThisSide').'</h1>';
+		if($REV != 0) return false; // TPL_ACT_RENDER for older revisions
+		if(!page_exists($ID)) return false;		
+		
 		$helper = $this->loadHelper('owncloud',false);
-		$event->data[1] .= $helper->getMediaOfThisPage($ID);
+		$list = $helper->getMediaOfThisPage($ID);
+		if($list == 0) return false;
+		$event->data[1] .= '<h1 id="headingusedmedia">'.$this->getLang('filesOnThisSide').'</h1>';
+		$event->data[1] .= $list;
 		
 	}
+	
+	/**
+    * Returns the path for the correspondig fileID (from table OC_filecache)
+    * Adds a list with all media used on this page to the end of the page
+    * Skips older revisions.
+    */
+	function mediaOnThisPageREV(&$event, $param){
+		global $REV;
+		global $ID;
+		if($REV == 0) return false; // see above
+		/* TODO this may not be the real media used on this page. Effectively
+		   this are the used media of the current page*/
+		echo '<h1 id="headingusedmedia">'.$this->getLang('filesOnThisSide').'</h1>';
+		$helper = $this->loadHelper('owncloud',false);
+		echo $helper->getMediaOfThisPage($ID);
+	}
 
-    
+    /*
+     * Makes sure, that files uploaded or delete using the DokuWiki mediamanager 
+     * are updated in the ownCloud database.
+     */
     function filecache(&$event, $param){
 		global $conf;
 		global $INFO;
 		require_once($this->getConf('pathtoowncloud').'/lib/base.php');
 		$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data[1]);
-		//$file = '/'.self::WIKISTORAGE.'/'.$event->data[2].'/'.$event->data[1];
-		//$refl = new ReflectionMethod('OC\Files\Cache\Updater', 'writeUpdate');
 		OC\Files\Filesystem::init($_SERVER['REMOTE_USER'],'/'.$_SERVER['REMOTE_USER'].'/files');
 
 		switch($param){
 				case self::FILEUPDATE:	$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data[1]);
 										OC\Files\Cache\Updater::writeUpdate($file);
-										OCA\DokuWiki\Storage::dokuwikiUploadFinish($file,$_SERVER['REMOTE_USER'],!$event->data[4]);
+										$this->fixDescription(str_replace($conf['mediadir'],'',$event->data[1]),2);// 2, because the medialog entry is already written
+										//OCA\DokuWiki\Storage::dokuwikiUploadFinish($file,$_SERVER['REMOTE_USER'],!$event->data[4]);
 										break;
 				case self::FILEREMOVE:	$file = str_replace($conf['mediadir'],'/'.self::WIKISTORAGE,$event->data['path']);
-										OC\Files\Cache\Updater::deleteUpdate($file); break;
+										OC\Files\Cache\Updater::deleteUpdate($file);
+										break;
 				case self::NSREMOVE:	if($event->data[1] == 'media'){
 											$dir = '/'.self::WIKISTORAGE.'/'.str_replace(':','/',$event->data[0]);
 											OC\Files\Cache\Updater::deleteUpdate($dir);
@@ -86,7 +116,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
     /**
      * Add fileid or update filepath
      *
-     * If file exists in the owncloud database, the fileid will be add to the file parameters,
+     * If file exists in the ownCloud database, the fileid will be add to the file parameters,
      * if fileid exists as parameter, the path will be updated (if necessary)
      * Changes will be write to disk
      * 
@@ -106,6 +136,8 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
      */
 	function preprocess(&$event, $param){
 		$text = $event->data;
+		global $ACT;
+		echo "<h1>$ID</h1>";
 		$event->data = preg_replace('#\{\{(.+)\}\}#Uise', "'{{'.action_plugin_owncloud::buildLink('\\1',false).'}}'",$text);
 	}
 
@@ -187,11 +219,43 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 		//return (($ralign)?" ":"").$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc."|".$fileid;
 	}
 	
-	
+	/**
+	 * Adds a fileid to and the wikiid to table dokuwiki_media_use
+	 */
 	function mediaUse($fileid, $helper){
 		global $ID;
 		global $INFO;
 		$heading = (is_array($INFO['meta']['description']['tableofcontents']))?$INFO['meta']['description']['tableofcontents'][0]['title']:'';
 		$helper->dbQuery('INSERT IGNORE INTO `*PREFIX*dokuwiki_media_use` (`fileid`, `wikipage`,`wikipage_hash`,`firstheading`) VALUES (?,?,?,?)', array($fileid, $ID, md5($ID), $heading));
+	}
+	
+	/**
+     * Put the last description/summary as new description (if it is not 'created' or 'deleted')
+     */
+	function fixDescription($file,$x=1){
+		global $conf;
+		global $lang;
+		$file = $conf['mediametadir'].'/'.$file.'.changes';
+		if(file_exists($file)){
+			$meta = file($file);
+			$desc = '';
+			$lines = 0;
+			if(!empty($meta)) $lines = count($meta);
+			if($lines >= $x ){
+				$xLine = $meta[$lines-$x];
+				$line = explode("\t", $xLine);
+				$desc = (isset($line[5]))?trim($line[5]):'';
+				if($desc == $lang['created'] || $desc == $lang['deleted'] ) $desc='';
+				// Set desc for the last line
+				$strip = array("\t", "\n");
+				$lastLine = array_pop($meta);
+				$line = explode("\t", $lastLine);
+				$line[5] = utf8_substr(str_replace($strip, ' ',htmlspecialchars($desc)),0,255);
+				array_push($meta,trim(implode("\t", $line))."\n");
+				io_saveFile($file,implode("", $meta));
+				return true;
+			}
+		}
+		return false;
 	}
 }

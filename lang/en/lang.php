@@ -27,3 +27,4 @@ $lang['source']                   = 'Source';
 $lang['filesOnThisSide']          = 'Used Images and files';
 $lang['nothingfound']             = 'Nothing found';
 $lang['showfileinfo']             = 'Show/hide authors and further file informations.';
+$lang['movedfrom']                = 'moved from';

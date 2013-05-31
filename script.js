@@ -29,7 +29,7 @@ var filelist = {
 		subfolder: function(dir, $row, level,fileid){			
 			jQuery.ajax({
 					type: 'POST',
-					url: DOKU_BASE + '/lib/plugins/owncloud/ajaxFilelist.php',
+					url: DOKU_BASE + '/lib/plugins/owncloud/ajax/filelist.php',
 					data: {dir: dir, fileid: fileid, level: level},
 					success: function(data) {filelist.folderContent(data, $row, level);},
 					async:false
@@ -63,7 +63,7 @@ var filehistory = {
 				$row = $current.find('.load').parent();
 				jQuery.ajax({
 					type: 'POST',
-					url: DOKU_BASE + '/lib/plugins/owncloud/ajaxHistory.php',
+					url: DOKU_BASE + '/lib/plugins/owncloud/ajax/history.php',
 					data: {file: file},
 					success: function(ret) {if(ret != file){filehistory.putContent(ret, $row);}else{}},
 					async:false
@@ -97,7 +97,7 @@ var Usedmedia = {
 				if(!li.hasClass('expand')){
 					jQuery.ajax({
 						type: 'POST',
-						url: DOKU_BASE + '/lib/plugins/owncloud/ajaxUsedMedia.php',
+						url: DOKU_BASE + '/lib/plugins/owncloud/ajax/usedMedia.php',
 						data: {fileid: li.attr('fileid')},
 						success: function(data) {
 										//li.find('.load3').remove();

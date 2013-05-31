@@ -1,18 +1,16 @@
 <?php
 /**
  * This syntax plugin overwrites the defaultdokuwiki image rendering. It uses the fileid
- * ftom the owncloud-database to link the image, and not the imagepath.
- * The Image also provides the the imagebox from the imagebox-plugin written by 
+ * from the owncloud-database to link the image, and don't uses the imagepath.
+ * The Image also provides the imagebox from the imagebox-plugin written by 
  * FFTiger <fftiger@wikisquare.com>, myst6re <myst6re@wikisquare.com>. see 
  * https://www.dokuwiki.org/plugin:imagebox for the original code. The style.css and
  * most code for the thumbnails from the imagebox-plugin is used here.
 
  * @license    GPL 3 (http://www.gnu.org/licenses/gpl.html)
  * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>, 2013
+
  */
- 
-error_reporting (E_ALL | E_STRICT);  
-ini_set ('display_errors', 'On');
 
 if (!defined('DOKU_LF')) define('DOKU_LF', "\n");
 if (!defined('DOKU_TAB')) define('DOKU_TAB', "\t");
@@ -27,9 +25,9 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		return array(
 			'author' => 'Martin Schulte',
 			'email'  => 'lebowski[at]corvus[dot]uberspace[dot]de',
-			'date'   => '2013-04-14',
+			'date'   => '2013-05-31',
 			'name'   => 'ownCloud Plugin',
-			'desc'   => 'Uses ownCloud fileID instead filepathes'
+			'desc'   => 'Uses ownClouds fileID instead filepathes'
 		);
 	}
 
@@ -56,38 +54,30 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 
 	function handle($match, $state, $pos, &$handler){
 		$imagebox =false;
+		$rawdata = $match;
 		if(preg_match('#\[(.*)\]#',$match,$itis)){
 			$match = $itis[1];
 			$imagebox = true;
-		}//file_put_contents("LinkTesten1.txt","\n",FILE_APPEND);
-		$rawdata = $match;
+		}
 		$match= Doku_Handler_Parse_Media($match);
 		$match['imagebox'] = $imagebox;
 		$match['pos'] = $pos;
+		$match['raw'] = $rawdata;
 		return array($match, $state, $pos);
 	}
 
 	function render($mode, &$renderer, $data){
-		//$renderer->doc .= "<div class=\"wrapper_filelist\"><div class=\"das\">Hallo</div>\n<a href=\"#\" onclick=\"javaScript:filelist.start(this)\">This is me</a></div>";
 		list($match, $state, $pos) = $data;
 		$helper = $this->loadHelper('owncloud',false);
 		if(!$helper) return false;
 		if($match['type']=='internalmedia'){
 			$match['fileid']=0;
-			if(preg_match('#fileid=(\d+)?#i',$rawdata,$fileid)){
-				($fileid[1]) ? $match['fileid'] = $fileid[1]:"";
-			}else{
-				$match['fileid'] = $helper->fileIDForWikiID($match['src']);
-			}
+			if(preg_match('#fileid=(\d+)?#i',$match['raw'],$fileid)) ($fileid[1]) ? $match['fileid'] = $fileid[1]:"";
+			else $match['fileid'] = $helper->fileIDForWikiID($match['src']);
 		}
-		
-		//var_dump($match);
-		//exit(0);
 		$opener = '';
 		$closer = '';
-		if($match['type']!='internalmedia'){
-			$match['title'] .= ' ('.$this->getLang('source').': '.$match['src'].')';
-		}
+		if($match['type'] != 'internalmedia') $match['title'] .= ' ('.$this->getLang('source').': '.$match['src'].')';
 		if($match['imagebox']){
 			$this->handleImageBox(&$match);
 			$match['linking'] = 'details'; // Detail when click on image, enlarge if click on magnify
@@ -101,8 +91,6 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 			$renderer->doc.=  $helper->internalmedia($match['fileid'],$match['src'], $match['title'], $match['align'], $match['width'],$match['height'], $match['cache'], $match['linking']);
 		}
 		$renderer->doc.=$closer;
-		//$b = $helper->getFolderContent(233);
-		//$renderer->doc .= var_export($b);
 		return true;
 	}
 	
