@@ -1,7 +1,0 @@
-base owncloud
-author Martin Schulte
-email lebowski[at]corvus[dot]uberspace[dot]de
-date 2013-02-19
-name owncloud Plugin
-desc Use ownCloud as file-backend for DokuWiki
-url http://dokuwiki.org/plugin:owncloud
