@@ -3,6 +3,7 @@ $meta['pathtoowncloud']      = array('string');
 $meta['owncloudurl']         = array('string');
 $meta['marginFilelist']      = array('numeric');
 $meta['linkAuthor']	         = array('onoff');
+//$meta['extendedDetail']      = array('onoff');
 $meta['allowExternalImages'] = array('onoff');
 $meta['allowedImagesURL']    = array('string');
 $meta['allowedImagesURLregexp'] = array('string');

@@ -1,23 +1,18 @@
 <?php
 /**
  * Reads the path for a mediafile from the owncloud database identified by the fileID 
- * submitted by &fileid=... . Then redirects to fetch.php
+ * submitted by &fileid=... . Then redirects to detail.php
  *
  * @license    GPL 3 (http://www.gnu.org/licenses/gpl.html)
  * @author     Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>, 2013
  */
-
-//error_reporting (E_ALL | E_STRICT);  
-//ini_set ('display_errors', 'On');
-
 // Prepare
-if(!defined('DOKU_INC')) define('DOKU_INC', dirname(__FILE__).'/../../../');
+if(!defined('DOKU_INC')) define('DOKU_INC', dirname(__FILE__).'/../../../../');
 define('DOKU_DISABLE_GZIP_OUTPUT', 1);
 // $INPUT and $conf
-
 require_once(DOKU_INC.'inc/init.php');
 
-$xlink = '';
+
 
 // Get parameters from url
 $fileID = $INPUT->int('fileid');
@@ -46,16 +41,14 @@ if(!empty($realmedia)) {
 }else{
 	$realmedia = $media;
 }
-
-
    
 
 // follow the rewrite-mode (from function ml(...), see /inc/common.php)
 // Webserver- or dokuwiki-/no rewrite? 
 if($conf['userewrite'] == 1) {
-	$script = '_media';
+	$script = '_detail';
 } else {
-	$script = 'lib/exe/fetch.php';
+	$script = 'lib/exe/detail.php';
 }
 // build URL based on rewrite mode
 if($conf['userewrite']) {
@@ -68,6 +61,7 @@ if($conf['userewrite']) {
 		$xlink .= $script.'?media='.$realmedia;
 	}
 }
+
  
 /*
 echo "<hr>";
@@ -79,7 +73,7 @@ echo "<hr>";
 */
 session_write_close(); //close session, we want use header()
 
-//redirect to original fetch.php
+//redirect to original detail.php
 header("Location: ".DOKU_URL.$xlink);
 
     

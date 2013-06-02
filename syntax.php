@@ -55,8 +55,8 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 	function handle($match, $state, $pos, &$handler){
 		$imagebox =false;
 		$rawdata = $match;
-		if(preg_match('#\[(.*)\]#',$match,$itis)){
-			$match = $itis[1];
+		if(preg_match('#\[(.*)\]#',$match,$inside)){
+			$match = $inside[1];
 			$imagebox = true;
 		}
 		$match= Doku_Handler_Parse_Media($match);
@@ -72,14 +72,28 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		if(!$helper) return false;
 		if($match['type']=='internalmedia'){
 			$match['fileid']=0;
-			if(preg_match('#fileid=(\d+)?#i',$match['raw'],$fileid)) ($fileid[1]) ? $match['fileid'] = $fileid[1]:"";
+			if(preg_match('#fileid=(\d+)?#i',$match['raw'],$fileid)){
+				 ($fileid[1]) ? $match['fileid'] = $fileid[1]:"";
+				 // Because Doku_Handler_Parse_Media interprets fileid=40 as width 40
+				 if($match['fileid'] == $match['width']){
+					 // No width given
+					//if(!preg_match('#[\?|&]'.$match['width'].'[&|\|| ]#',$match['raw'])) $match['width'] = NULL;
+					//else{
+						$match['width'] = NULL;
+						if(preg_match('#[\?|&](\d+)(x(\d+))?#i',$match['raw'],$size)){
+							($size[1])?$match['width'] = $size[1]:$match['width'] = NULL;
+							($size[3])?$match['height'] = $size[3]:$match['height'] = NULL;
+						}
+					//}
+				 }
+			}
 			else $match['fileid'] = $helper->fileIDForWikiID($match['src']);
 		}
 		$opener = '';
 		$closer = '';
 		if($match['type'] != 'internalmedia') $match['title'] .= ' ('.$this->getLang('source').': '.$match['src'].')';
 		if($match['imagebox']){
-			$this->handleImageBox(&$match);
+			$this->handleImageBox(&$match,$helper);
 			$match['linking'] = 'details'; // Detail when click on image, enlarge if click on magnify
 			list($opener,$closer) = $this->buildImagebox($match);
 			$match['align'] = 'box2'; // overwrite class to mediabox2, alignment from thumb.
@@ -104,7 +118,7 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
     * @param $match return from Doku_Handler_Parse_Media()
     *
     */
-	function handleImageBox($match){// Detail immer, M
+	function handleImageBox($match,&$helper){// Detail immer, M
 		$match['w'] = $match['width'];
 		$dispMagnify = ($match['w'] || $match['height']);
 		$gimgs = false;
@@ -112,7 +126,7 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		if($match['type']=='internalmedia') {
 			$exists = false;
 			resolve_mediaid(getNS($ID), $src, $exists);
-			$match['magnifyLink'] = ml($src,array('cache'=>$match['cache'],'fileid'=>$match['fileid']),true);
+			$match['magnifyLink'] = $helper->ml($src,array('cache'=>$match['cache'],'fileid'=>$match['fileid']),true);
 			if($hash) $match['magnifyLink'] .= '#'.$hash;
 			if($exists)	$gimgs = @getImageSize(mediaFN($src));
 		}else{
@@ -143,17 +157,17 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
     *                       the closing div's
     */
 	public function buildImagebox($match){
-		$opener  = '<div class="thumb2 t'.$match['align'].'" style="width:'.($match['w']?($match['w']+10).'px':'auto').'"><div class="thumbinner">';
+		$opener  = '<div class="thumb2 t'.$match['align'].'" style="width:'.($match['w']?($match['w']+10).'px':'auto').';"><div class="thumbinner">';
 		$closer  = '<div class="thumbcaption">';
 		$closer .= '<div class="magnify">';
 		$closer .= '<a class="internal" title="'.$this->getLang('enlarge').'" href="'.$match['magnifyLink'].'">';
-		$closer .= '<img width="15" height="11" alt="" src="'.DOKU_BASE.'lib/plugins/owncloud/images/magnify-clip.png"/>';
+		$closer .= '<img width="15" height="11" alt="" src="'.DOKU_BASE.'lib/plugins/owncloud/images/magnify-clip.png"></img>';
 		$closer .= '</a></div>';
 		
 		$style=$this->getConf('default_caption_style');
 		if($style=='Italic')	$closer .= '<em>'.htmlspecialchars($match['title']).'</em>';
 		elseif($style=='Bold')	$closer .= '<strong>'.htmlspecialchars($match['title']).'</strong>';
-		else 					$closer .= htmlspecialchars($match['title']);
+		else 					$closer .= '<span>'.htmlspecialchars($match['title']).'</span>';
 		
 		$closer .= '</div></div></div>';
 		return array($opener,$closer);

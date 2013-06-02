@@ -3,7 +3,6 @@
  * German language file for plugin owncloud
  *
  */
-
 $lang['emptyFolder']              = 'leerer Ordner';
 $lang['filelistHeader']           = 'Inhalt des Ordners';
 $lang['filelistName']             = 'Name';
@@ -30,3 +29,4 @@ $lang['nothingfound']             = 'Nichts gefunden';
 $lang['showfileinfo']             = 'Autoren und weitere Dateiinformationen anzeigen/ausblenden.';
 $lang['movedfrom']                = 'verschoben von';
 $lang['noUsage']                  = 'Diese Datei wird noch auf keiner Seite verwendet.';
+$lang['owncloudNotInstalled']     = 'ownCloud ist noch nicht eingerichtet. Bitte schließe die Installation ab.';

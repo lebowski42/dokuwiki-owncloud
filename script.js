@@ -45,14 +45,12 @@ var filelist = {
 						$row.removeClass('expanded').addClass('collapsed');
 					}else{
 						var dir = folder.attr('title');
-						
 						$row.after('<tr><td colspan="5" class="load"></td></tr>');
 						filelist.subfolder(dir,$row.next(),nextLevel);
 						$row.removeClass('collapsed').addClass('expanded');
 					}
 				});
 		}
-	
 };
 
 var filehistory = {

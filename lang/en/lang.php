@@ -29,3 +29,4 @@ $lang['nothingfound']             = 'Nothing found';
 $lang['showfileinfo']             = 'Show/hide authors and further file informations.';
 $lang['movedfrom']                = 'moved from';
 $lang['noUsage']                  = 'This file is used on any page.';
+$lang['owncloudNotInstalled']     = 'ownCloud is not configured yet. Please finish the installation.';

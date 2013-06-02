@@ -285,6 +285,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		$meta = $this->getMediaMeta($file);
 		if(empty($meta)) return '<tr><td colspan="4" align="center">'.($this->getLang('noVersion')).'</td></tr>';
 		$meta =  array_reverse($meta); // Newest first.
+		$authorlist = false;
 		if($this->getConf('linkAuthor') && !plugin_isdisabled('authorlist')){
 			$authorlist = $this->loadHelper('authorlist',true);
 			$authorlist->setOptions($ID,array('displayaslist'=>false));
@@ -536,7 +537,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 	 * will strip default parameters to produce even cleaner URLs
 	 * 
 	 * This is nearly the code from inc/common.php. Replaced lib/exe/fetch.php 
-	 * with lib/plugins/owncloud/fetch.php.
+	 * with lib/plugins/owncloud/exe/fetch.php.
 	 * 
 	 * @author Andreas Gohr <andi@splitbrain.org>
 	 * @author Martin Schulte <lebowski[at]corvus[dot]uberspace[dot]de>
@@ -579,7 +580,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		// external URLs are always direct without rewriting
 		if(preg_match('#^(https?|ftp)://#i', $id)) {
 			// + changed lib/exe to lib/plugins/owncloud/
-			$xlink .= 'lib/plugins/owncloud/fetch.php';
+			$xlink .= 'lib/plugins/owncloud/exe/fetch.php';
 			// add hash:
 			$xlink .= '?hash='.substr(md5(auth_cookiesalt().$id), 0, 6);
 			if($more) {
@@ -599,14 +600,14 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 				$script = '_media';
 			} else {
 				// + changed lib/exe to lib/plugins/owncloud/
-				$script = 'lib/plugins/owncloud/fetch.php';
+				$script = 'lib/plugins/owncloud/exe/fetch.php';
 			}
 		} else {
 			if($conf['userewrite'] == 1) {
 				$script = '_detail';
 			} else {
 				// + changed lib/exe to lib/plugins/owncloud/
-				$script = 'lib/plugins/owncloud/detail.php';
+				$script = 'lib/plugins/owncloud/exe/detail.php';
 			}
 		}
 
