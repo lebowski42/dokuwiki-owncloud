@@ -210,7 +210,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 			if($fileid == '' || $fileid < 1) return $rawdata;
 		}
 		
-		if($write) $this -> mediaUse($fileid,&$helper);
+		if($write) $this -> mediaUse($fileid,$helper);
 		$param = preg_replace('#fileid=(\d+)?#i',"fileid=$fileid",$param,-1,$count);
 		if($fileid!='' && $fileid > 0 && $count < 1) $param = (($param != "") ? "$param&fileid=$fileid":"fileid=$fileid");
 		return (($ralign)?" ":"").":".$src.(($param != "") ? "?$param":"").(($lalign)?" ":"")."|".$desc;
@@ -220,7 +220,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 	/**
 	 * Adds a fileid to and the wikiid to table dokuwiki_media_use
 	 */
-	function mediaUse($fileid, $helper){
+	function mediaUse($fileid, &$helper){
 		global $ID;
 		global $INFO;
 		$heading = (is_array($INFO['meta']['description']['tableofcontents']))?$INFO['meta']['description']['tableofcontents'][0]['title']:'';

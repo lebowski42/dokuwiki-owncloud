@@ -93,7 +93,7 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		$closer = '';
 		if($match['type'] != 'internalmedia') $match['title'] .= ' ('.$this->getLang('source').': '.$match['src'].')';
 		if($match['imagebox']){
-			$this->handleImageBox(&$match,$helper);
+			$this->handleImageBox($match,$helper);
 			$match['linking'] = 'details'; // Detail when click on image, enlarge if click on magnify
 			list($opener,$closer) = $this->buildImagebox($match);
 			$match['align'] = 'box2'; // overwrite class to mediabox2, alignment from thumb.
@@ -118,7 +118,7 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
     * @param $match return from Doku_Handler_Parse_Media()
     *
     */
-	function handleImageBox($match,&$helper){// Detail immer, M
+	function handleImageBox(&$match,&$helper){// Detail immer, M
 		$match['w'] = $match['width'];
 		$dispMagnify = ($match['w'] || $match['height']);
 		$gimgs = false;

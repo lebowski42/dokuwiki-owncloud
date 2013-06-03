@@ -1,6 +1,8 @@
 <?php
 /**
- * DokuWiki Image Detail Page
+ * DokuWiki Image Detail Page. 
+ * Based on the source of the detail.php from the dokuwiki template
+ * written by Andreas Gohr and Anika Henke.
  *
  * @author   Andreas Gohr <andi@splitbrain.org>
  * @author   Anika Henke <anika@selfthinker.org>
