@@ -82,13 +82,13 @@ var Usedmedia = {
 			var $ol = jQuery('#usedmedia');
 			var $items =  $ol.children();
 			jQuery.each($items,function(){
-										$li = jQuery(this);
-										//$li.append('<div class="load3"></div>');
-										Usedmedia.addInfo($li);
-								}
+				$li = jQuery(this);
+				//$li.append('<div class="load3"></div>');
+				Usedmedia.addInfo($li);
 			);
-			var $link = jQuery('#usemediadetail');
-			$link.attr('onclick', 'Usedmedia.collapse();');
+                        var $link = jQuery('#usemediadetail');
+                        $link.off('click');
+                        $link.click(Usedmedia.collapse);
 		},
 		addInfo: function(li){
 				//li.append("<ul><li>"+li.attr('fileid')+"</li><li>Mein Text</li></ul>");
@@ -98,10 +98,10 @@ var Usedmedia = {
 						url: DOKU_BASE + '/lib/plugins/owncloud/ajax/usedMedia.php',
 						data: {fileid: li.attr('fileid')},
 						success: function(data) {
-										//li.find('.load3').remove();
-										li.append(data);
-										li.addClass('expand')
-									},
+							//li.find('.load3').remove();
+							li.append(data);
+							li.addClass('expand')
+						},
 						async:true
 					});
 				}
@@ -114,7 +114,8 @@ var Usedmedia = {
 						jQuery(this).removeClass('expand');
 			});
 			var $link = jQuery('#usemediadetail');
-			$link.attr('onclick', 'Usedmedia.start();');
+                        $link.off('click');
+                        $link.click(Usedmedia.start);
 		}
 };
 
@@ -125,6 +126,9 @@ var Usedmedia = {
 
 
 jQuery(document).ready(function() {
+        var $link = jQuery('#usemediadetail');
+        $link.off('click');
+        $link.click(Usedmedia.start);
 	if(window.filelistOnThisSide){
 		filelist.start();
 	}
