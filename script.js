@@ -85,7 +85,7 @@ var Usedmedia = {
 				$li = jQuery(this);
 				//$li.append('<div class="load3"></div>');
 				Usedmedia.addInfo($li);
-			);
+			});
                         var $link = jQuery('#usemediadetail');
                         $link.off('click');
                         $link.click(Usedmedia.collapse);
