@@ -39,7 +39,7 @@ if(isset($_POST['level'])){
 
 if(file_exists($fullpath)){
 	$dircontent = scandir($fullpath);
-	natcasesort($fullpath); // sort by name
+	natcasesort($dircontent); // sort by name
 	$files = array();
 	$folders = array();
 	foreach($dircontent as $file ){
