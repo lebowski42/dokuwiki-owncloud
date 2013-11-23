@@ -46,8 +46,13 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 				echo $lang['owncloudNotInstalled'];
 				exit();
 			}
+                        // This really should be replaced by public OC methods. Oh well.
+                        $storageId = 'local::'.$conf['mediadir'].'/';
+                        if (strlen($storageId) > 64) {
+                          $storageId = md5($storageId);
+                        }
 			// Find Storage ID
-			$this->dbQuery('SELECT numeric_id FROM `*PREFIX*storages` WHERE `id` LIKE ?', array('%'.$conf['mediadir'].'/'));
+			$this->dbQuery('SELECT numeric_id FROM `*PREFIX*storages` WHERE `id` LIKE ?', array($storageId));
 			$this->storageNr = $this->lastQuery->fetchOne();
 		}
     }
