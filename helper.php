@@ -46,8 +46,13 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 				echo $lang['owncloudNotInstalled'];
 				exit();
 			}
+                        // This really should be replaced by public OC methods. Oh well.
+                        $storageId = 'local::'.$conf['mediadir'].'/';
+                        if (strlen($storageId) > 64) {
+                          $storageId = md5($storageId);
+                        }
 			// Find Storage ID
-			$this->dbQuery('SELECT numeric_id FROM `*PREFIX*storages` WHERE `id` LIKE ?', array('%'.$conf['mediadir'].'/'));
+			$this->dbQuery('SELECT numeric_id FROM `*PREFIX*storages` WHERE `id` LIKE ?', array($storageId));
 			$this->storageNr = $this->lastQuery->fetchOne();
 		}
     }
@@ -171,7 +176,7 @@ class helper_plugin_owncloud extends DokuWiki_Plugin
 		$this->dbQuery('SELECT `fileid`,`path` FROM `*PREFIX*dokuwiki_media_use` JOIN `*PREFIX*filecache` USING(`fileid`) WHERE `wikipage_hash` = ? ORDER BY `fileid` ASC', array(md5($wikiid)));
 		$rows = $this->lastQuery->numRows();
 		if(empty($rows) || $rows == 0) return false;
-		$ret = '<p style="float:right;"><a href="#headingusedmedia" onclick="Usedmedia.start();" id="usemediadetail">'.$this->getLang('showfileinfo').'</a></p>';
+		$ret = '<p style="float:right;"><a href="#headingusedmedia" id="usemediadetail">'.$this->getLang('showfileinfo').'</a></p>';
 		$ret .= DOKU_LF.'<ol id="usedmedia">'.DOKU_LF;
 		$ids = $this->lastQuery;
 		for($i = 1; $i <= $rows; $i++){
