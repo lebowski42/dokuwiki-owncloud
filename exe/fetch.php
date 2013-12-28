@@ -47,6 +47,12 @@ if(!empty($realmedia)) {
 	$realmedia = $media;
 }
 
+$width  = $INPUT->int('w');
+$height = $INPUT->int('h');
+$token  = $INPUT->str('tok');
+$newtoken = media_get_token($realmedia, $width, $height);
+$queryString = str_replace($token,$newtoken,$queryString);
+
 
    
 
