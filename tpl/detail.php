@@ -122,6 +122,7 @@ $fileid = -1;
 									}else{
 										echo $helper->filelist($fileid,'');
 									}
+									if($dir == "." || $dir == "") $dir=":";// We are at the top
 									echo $helper->internalmedia('',$helper->pathToWikiID($dir),$helper->getLang('parentFolder'));
 									if(!$isDir) echo ")</dd>";
                                 ?>

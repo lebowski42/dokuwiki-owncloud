@@ -86,9 +86,9 @@ var Usedmedia = {
 				//$li.append('<div class="load3"></div>');
 				Usedmedia.addInfo($li);
 			});
-                        var $link = jQuery('#usemediadetail');
-                        $link.off('click');
-                        $link.click(Usedmedia.collapse);
+            var $link = jQuery('#usemediadetail');
+            $link.off('click');
+            $link.click(Usedmedia.collapse);
 		},
 		addInfo: function(li){
 				//li.append("<ul><li>"+li.attr('fileid')+"</li><li>Mein Text</li></ul>");
