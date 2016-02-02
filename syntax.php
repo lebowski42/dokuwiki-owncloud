@@ -52,7 +52,7 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		
 	}
 
-	function handle($match, $state, $pos, &$handler){
+	function handle($match, $state, $pos, Doku_Handler $handler){
 		$imagebox =false;
 		$rawdata = $match;
 		if(preg_match('#\[(.*)\]#',$match,$inside)){
@@ -66,7 +66,7 @@ class syntax_plugin_owncloud extends DokuWiki_Syntax_Plugin {
 		return array($match, $state, $pos);
 	}
 
-	function render($mode, &$renderer, $data){
+	function render($mode, Doku_Renderer $renderer, $data){
 		list($match, $state, $pos) = $data;
 		$helper = $this->loadHelper('owncloud',false);
 		if(!$helper) return false;
