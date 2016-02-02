@@ -29,7 +29,7 @@ class action_plugin_owncloud extends DokuWiki_Action_Plugin{
 	/**
 	 * Register all hooks
 	*/
-	function register(&$contr) {
+	function register(Doku_Event_Handler $contr) {
 		$contr->register_hook('IO_WIKIPAGE_WRITE','BEFORE',$this,'write');
 		//$contr->register_hook('PARSER_WIKITEXT_PREPROCESS','BEFORE',$this,'preprocess');
 		$contr->register_hook('MEDIA_UPLOAD_FINISH','AFTER',$this,'filecache',self::FILEUPDATE);
